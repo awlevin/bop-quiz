@@ -21,7 +21,7 @@ export default async function FeedbackBoard() {
   return (
     <main className={styles.page}>
       <header className={styles.top}>
-        <Link href="/" aria-label="Music Mania home">
+        <Link href="/" aria-label="Bop Quiz home">
           <Wordmark className={styles.mark} />
         </Link>
       </header>
@@ -57,7 +57,7 @@ export default async function FeedbackBoard() {
                   {item.commit && (
                     <>
                       {' '}
-                      <a href={`https://github.com/awlevin/music-mania/commit/${item.commit}`}>
+                      <a href={`https://github.com/awlevin/bop-quiz/commit/${item.commit}`}>
                         {item.commit.slice(0, 7)}
                       </a>
                     </>

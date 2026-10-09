@@ -2,8 +2,8 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Music Mania',
-    short_name: 'Music Mania',
+    name: 'Bop Quiz',
+    short_name: 'Bop Quiz',
     description: 'One screen plays the song. Everyone races to name it from their phone.',
     start_url: '/',
     display: 'standalone',

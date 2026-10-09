@@ -155,12 +155,12 @@ class RedisStore implements RoomStore {
 // ---------------------------------------------------------------------------
 
 // On globalThis so dev-server module reloads keep the same rooms and sockets.
-const holder = globalThis as typeof globalThis & { __musicManiaStore?: RoomStore };
+const holder = globalThis as typeof globalThis & { __bopQuizStore?: RoomStore };
 
 export function getStore(): RoomStore {
-  if (!holder.__musicManiaStore) {
+  if (!holder.__bopQuizStore) {
     const redis = getRedis();
-    holder.__musicManiaStore = redis ? new RedisStore(redis, redisUrl()!) : new MemoryStore();
+    holder.__bopQuizStore = redis ? new RedisStore(redis, redisUrl()!) : new MemoryStore();
   }
-  return holder.__musicManiaStore;
+  return holder.__bopQuizStore;
 }

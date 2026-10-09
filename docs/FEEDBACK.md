@@ -3,7 +3,7 @@
 Players send feedback from their phones ("Send feedback", or "Something off with
 this song?" on the reveal) and from the gear menu on the host screen. Every item
 gets an id (`FB-12`), and its status is public at
-[/feedback](https://music-mania-three.vercel.app/feedback). This page is the
+[/feedback](https://bop-quiz.vercel.app/feedback). This page is the
 runbook for whoever closes those items: a person, or a scheduled Claude agent.
 
 The promise to players is simple: **every item ends up `fixed` or `declined`,

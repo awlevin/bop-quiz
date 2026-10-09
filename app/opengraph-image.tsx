@@ -5,7 +5,7 @@ import { ImageResponse } from 'next/og';
 
 // The share card: the jukebox booth, the wordmark, one title strip and the
 // record. `twitter-image.tsx` re-exports all of this.
-export const alt = 'Music Mania — name the song before your friends do';
+export const alt = 'Bop Quiz — name the song before your friends do';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -201,8 +201,8 @@ export default function Image() {
               textShadow: '6px 6px 0 #e9383f',
             }}
           >
-            <div style={{ display: 'flex' }}>Music</div>
-            <div style={{ display: 'flex', marginLeft: 57, color: BUTTER }}>Mania</div>
+            <div style={{ display: 'flex' }}>Bop</div>
+            <div style={{ display: 'flex', marginLeft: 57, color: BUTTER }}>Quiz</div>
           </div>
 
           {/* One jukebox title strip, carrying the pitch. */}

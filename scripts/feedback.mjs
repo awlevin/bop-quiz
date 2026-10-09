@@ -9,7 +9,7 @@
 // Needs FEEDBACK_ADMIN_TOKEN (the same value as on Vercel). FEEDBACK_URL
 // defaults to production.
 
-const BASE = process.env.FEEDBACK_URL ?? 'https://music-mania-three.vercel.app';
+const BASE = process.env.FEEDBACK_URL ?? 'https://bop-quiz.vercel.app';
 const TOKEN = process.env.FEEDBACK_ADMIN_TOKEN;
 if (!TOKEN) {
   console.error('Set FEEDBACK_ADMIN_TOKEN first (vercel env pull gets it).');

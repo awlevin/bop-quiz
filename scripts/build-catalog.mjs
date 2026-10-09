@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Reproducible catalog builder for the music-mania "name that tune" game.
+// Reproducible catalog builder for the bop-quiz "name that tune" game.
 // Plain ESM, no dependencies, requires Node 22+ (global fetch).
 //
 // catalog-seed.json is the source of truth. Every entry is hand written from
@@ -378,7 +378,7 @@ async function fetchJson(url, cacheKey, { force = false } = {}) {
     attempt += 1;
     let res;
     try {
-      res = await fetch(url, { headers: { 'User-Agent': 'music-mania-catalog-builder/1.0' } });
+      res = await fetch(url, { headers: { 'User-Agent': 'bop-quiz-catalog-builder/1.0' } });
     } catch (err) {
       if (attempt >= 5) throw err;
       console.warn(`  [network error] ${err.message} — retrying in ${BACKOFF_MS}ms`);

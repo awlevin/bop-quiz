@@ -21,19 +21,19 @@ interface WordmarkProps {
 export function Wordmark({ className = '', href }: WordmarkProps) {
   const lettering = (
     <>
-      <span aria-hidden>Music</span>
-      <span aria-hidden>Mania</span>
+      <span aria-hidden>Bop</span>
+      <span aria-hidden>Quiz</span>
     </>
   );
   if (href) {
     return (
-      <Link href={href} className={`${styles.wordmark} ${styles.wordmarkLink} ${className}`} aria-label="Music Mania home">
+      <Link href={href} className={`${styles.wordmark} ${styles.wordmarkLink} ${className}`} aria-label="Bop Quiz home">
         {lettering}
       </Link>
     );
   }
   return (
-    <span className={`${styles.wordmark} ${className}`} role="img" aria-label="Music Mania">
+    <span className={`${styles.wordmark} ${className}`} role="img" aria-label="Bop Quiz">
       {lettering}
     </span>
   );

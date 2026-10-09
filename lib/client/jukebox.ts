@@ -1,4 +1,4 @@
-// The only thing in Music Mania that makes sound. It runs on the host screen;
+// The only thing in Bop Quiz that makes sound. It runs on the host screen;
 // phones never load it.
 //
 // Two decks, like a DJ's: while one plays, the other loads the next preview,

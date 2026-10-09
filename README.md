@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/brand/banner.png" alt="Music Mania" width="900">
+  <img src="assets/brand/banner.png" alt="Bop Quiz" width="900">
 </p>
 
 <p align="center">
@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://music-mania-three.vercel.app"><b>Play it → music-mania-three.vercel.app</b></a>
+  <a href="https://bop-quiz.vercel.app"><b>Play it → bop-quiz.vercel.app</b></a>
 </p>
 
 Open it on the television. Everyone else scans the code on the screen and
@@ -46,7 +46,7 @@ onto the television and a sad trombone plays.
 ### Playing alone
 
 Nobody around? Press **Quick play** on the landing page, or open
-[/solo](https://music-mania-three.vercel.app/solo). One screen plays the
+[/solo](https://bop-quiz.vercel.app/solo). One screen plays the
 songs and takes your answers: the same ten questions, the same fifteen
 seconds, the same scoring, with no room to open and nothing to scan. The
 reveal comes the moment you lock in, so a game takes about as long as you
@@ -160,7 +160,7 @@ instances.
 Every phone carries a *Send feedback* link, and the reveal has a shortcut for
 "something is off with this song" that attaches the song in question. Each
 report gets a public id like `FB-12` and a status, and anyone can read the
-queue at [/feedback](https://music-mania-three.vercel.app/feedback) to see
+queue at [/feedback](https://bop-quiz.vercel.app/feedback) to see
 what was fixed, what was declined, and why.
 
 ## Credits
