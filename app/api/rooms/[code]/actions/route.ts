@@ -60,7 +60,7 @@ export async function POST(
   // The TV can start a game, and so can the first player, from their phone.
   const leader = viewer.role === 'player' && room.players[0]?.id === viewer.playerId;
   if (body.type === 'start' && (viewer.role === 'host' || leader)) {
-    const { songs, finales, reprises } = await pickSongs(
+    const { songs, finales } = await pickSongs(
       ROUNDS_PER_GAME + SPARE_SONGS,
       room.playedSongIds,
       room.finales?.[0]?.id,
@@ -70,7 +70,6 @@ export async function POST(
       songs: songs.slice(0, ROUNDS_PER_GAME),
       spares: songs.slice(ROUNDS_PER_GAME),
       finales,
-      reprises,
     };
   }
 
