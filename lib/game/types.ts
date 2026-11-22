@@ -4,6 +4,8 @@
 // never see it: they get a RoomView, built per recipient by `views.ts`, which
 // holds back the answer until the reveal.
 
+import type { Setlist, SetlistMode, Taste } from './setlist';
+
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
 
 export type Phase = 'lobby' | 'loading' | 'guessing' | 'reveal' | 'finished';
@@ -67,6 +69,8 @@ export interface RoomState {
   lobbyUrl: string | null;
   /** Every song this room has heard, so "play again" never repeats one. */
   playedSongIds: number[];
+  /** Where the songs come from. Absent in rooms older than setlist modes: Classic. */
+  setlist?: Setlist;
   createdAt: number;
 }
 
@@ -82,7 +86,11 @@ export type Action =
   | { type: 'answer'; playerId: string; text: string }
   | { type: 'give-up'; playerId: string }
   | { type: 'next'; roundIndex: number }
-  | { type: 'tick' };
+  | { type: 'tick' }
+  /** The host's setlist mode and picks, between games. */
+  | { type: 'setlist'; mode: SetlistMode; taste: Taste }
+  /** A player's picks for Crowd picks, between games. */
+  | { type: 'taste'; playerId: string; taste: Taste };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
 
@@ -132,6 +140,13 @@ export interface RoomView {
   pause: { at: number; by: string } | null;
   /** Host only, in the lobby: music to join by. */
   lobbyUrl?: string;
+  setlist: {
+    mode: SetlistMode;
+    /** Host only: the TV's own picks. */
+    host?: Taste;
+    /** Host only, in Crowd picks: what each player still in the room has picked, by id. */
+    picks?: Record<string, Taste>;
+  };
   /** Players only. */
   you?: {
     id: string;
@@ -139,6 +154,8 @@ export interface RoomView {
     leader: boolean;
     /** What this player locked in. Whether it was right waits for the reveal. */
     answer: { text: string; elapsedMs: number; gaveUp: boolean } | null;
+    /** This player's Crowd picks, or null before they pick. */
+    taste: Taste | null;
   };
   /** Server clock when this view was built; screens derive their offset from it. */
   serverNow: number;

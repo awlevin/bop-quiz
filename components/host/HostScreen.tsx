@@ -31,6 +31,7 @@ import { Confetti } from './Confetti';
 import { Halo } from './Halo';
 import styles from './host.module.css';
 import { QrCode } from './JoinCode';
+import { pickedPlayers, SetlistLobby, SetlistModeSetting, useSetlistSync } from './Setlist';
 import { type AudioReport, type Director, useDirector } from './useDirector';
 import { WhiteFlag } from './WhiteFlag';
 
@@ -60,6 +61,7 @@ export function HostScreen({ code }: { code: string }) {
     [code, token],
   );
   const director = useDirector(view, clockOffset, settings.lobbyMusic, report);
+  useSetlistSync(view, token ?? null);
 
   // Remember every song this screen reveals, so later rooms skip it.
   const revealedSongId = view?.round?.song?.id;
@@ -286,6 +288,7 @@ function SettingsMenu({ code, songTitle }: { code: string; songTitle?: string })
             checked={settings.lobbyMusic}
             onChange={(lobbyMusic) => updateSettings({ lobbyMusic })}
           />
+          <SetlistModeSetting />
           <button
             type="button"
             className={styles.settingsLink}
@@ -311,6 +314,7 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
   const join = useJoinUrl(view.code);
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  const picked = pickedPlayers(view);
 
   const start = async () => {
     setStarting(true);
@@ -358,6 +362,7 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
                 <PlayerChip
                   rank={i + 1}
                   name={p.name}
+                  lit={picked.has(p.id)}
                   value={
                     <button
                       className={styles.removeButton}
@@ -375,6 +380,8 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
             <p className={styles.lobbyEmpty}>Names show up here as people join.</p>
           )}
         </div>
+
+        <SetlistLobby view={view} />
 
         <div className={styles.lobbyStart}>
           <Key onClick={() => void start()} disabled={view.players.length === 0 || starting}>

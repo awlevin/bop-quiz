@@ -16,6 +16,7 @@ import { rankPlayers } from '@/lib/game/rank';
 import type { RoomView } from '@/lib/game/types';
 
 import styles from './play.module.css';
+import { TastePicker } from './TastePicker';
 
 const noStore = () => () => {};
 
@@ -314,6 +315,7 @@ function LobbyView({ view, token, onLeft }: { view: RoomView; token: string; onL
           ? 'You were first in, so you run the game. Start it when everyone has joined.'
           : `Watch the big screen. ${view.players[0]?.name ?? 'The host'} starts the game.`}
       </p>
+      {view.setlist?.mode === 'crowd' && <TastePicker view={view} token={token} />}
       {leader && <StartKey view={view} token={token} label="Start game" />}
       <div className={styles.list}>
         {view.players.map((p, i) => (

@@ -51,6 +51,18 @@ reveal comes the moment you lock in, so a game takes about as long as you
 make it. Your best score stays on that browser, and every game tells you
 whether you beat it.
 
+### Picking the setlist (experimental)
+
+The host's settings menu has a **Setlist mode**. *Classic* draws from the
+whole catalog. In *Crowd picks* every phone picks the genres and decades it
+likes in the lobby, and the setlist mixes everyone's picks: songs more people
+asked for come up more often, and each person gets their share, so the lone
+soul fan is not drowned out by a room of pop fans. In *Host picks* the
+television picks for everyone. A pick too narrow for a whole game is filled
+with the closest songs: the same genre a decade out, then the same decade in
+another genre. [/shuffle](https://bop-quiz.vercel.app/shuffle) previews each
+mode with a few made-up picks.
+
 <p align="center">
   <img src="assets/screenshots/tv-guessing.png" alt="The television during a round: a spinning record, a countdown, and who has locked in" width="900">
   <img src="assets/screenshots/tv-reveal.png" alt="The television at the reveal: the album sleeve beside the record, the title strip, and the points this round" width="900">

@@ -1,5 +1,6 @@
 import { pickSongs } from '@/lib/catalog';
 import { ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
+import { cleanTaste, isSetlistMode, tastesFor } from '@/lib/game/setlist';
 import type { Action } from '@/lib/game/types';
 import { dispatch, identify, newPlayerId, newToken, normalizeCode } from '@/lib/realtime/rooms';
 import { getStore } from '@/lib/realtime/store';
@@ -15,6 +16,8 @@ interface Body {
   text?: string;
   playerId?: string;
   roundIndex?: number;
+  mode?: unknown;
+  taste?: unknown;
 }
 
 export async function POST(
@@ -46,6 +49,11 @@ export async function POST(
   const roundIndex = Number(body.roundIndex);
   let action: Action | null = null;
 
+  // Setlist picks are checked here, before any of it reaches the room.
+  const taste = cleanTaste(body.taste);
+  if ((body.type === 'setlist' || body.type === 'taste') && !taste) return refuse(400, 'That is not a pick.');
+  if (body.type === 'setlist' && !isSetlistMode(body.mode)) return refuse(400, 'There is no such setlist.');
+
   if (body.type === 'tick') action = { type: 'tick' };
   if (body.type === 'next') action = { type: 'next', roundIndex };
   if (body.type === 'resume') action = { type: 'resume' };
@@ -64,6 +72,8 @@ export async function POST(
       ROUNDS_PER_GAME + SPARE_SONGS,
       room.playedSongIds,
       room.finales?.[0]?.id,
+      // Crowd picks or Host picks; none at all is a Classic draw.
+      tastesFor(room.setlist, room.players.map((p) => p.id)),
     );
     action = {
       type: 'start',
@@ -79,12 +89,16 @@ export async function POST(
     if (body.type === 'remove-player' && body.playerId) {
       action = { type: 'remove-player', playerId: body.playerId };
     }
+    if (body.type === 'setlist' && isSetlistMode(body.mode) && taste) {
+      action = { type: 'setlist', mode: body.mode, taste };
+    }
   } else {
     const { playerId } = viewer;
     if (body.type === 'answer') action = { type: 'answer', playerId, text: String(body.text ?? '') };
     if (body.type === 'give-up') action = { type: 'give-up', playerId };
     if (body.type === 'rename') action = { type: 'rename', playerId, name: String(body.name ?? '') };
     if (body.type === 'leave') action = { type: 'remove-player', playerId };
+    if (body.type === 'taste' && taste) action = { type: 'taste', playerId, taste };
   }
 
   if (!action) return refuse(403, 'That action is not available to you.');

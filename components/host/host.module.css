@@ -286,6 +286,11 @@
   min-height: 19em;
 }
 
+/* Room for the setlist panel (Setlist.tsx) when there is one. */
+.lobbyRoom:has([data-setlist]) .lobbyPlayers {
+  min-height: 9em;
+}
+
 .lobbyEmpty {
   grid-column: 1 / -1;
   padding: 2.4em 1em;

@@ -16,6 +16,7 @@ import {
   ROUND_KINDS,
 } from './config';
 import { grade } from './score';
+import { CLASSIC } from './setlist';
 import type { Action, ReduceResult, RoomState, Round, Song } from './types';
 
 export function createRoom(
@@ -37,6 +38,7 @@ export function createRoom(
     pause: null,
     lobbyUrl,
     playedSongIds: [],
+    setlist: CLASSIC,
     createdAt: now,
   };
 }
@@ -275,6 +277,22 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
         return { ok: true, state };
       }
       return { ok: true, state: advance(state) };
+    }
+
+    case 'setlist': {
+      // Picks shape the next draw, so they change only between games.
+      if (state.phase !== 'lobby' && state.phase !== 'finished') return fail('The game is already running.');
+      const setlist = { ...(state.setlist ?? CLASSIC), mode: action.mode, host: action.taste };
+      return { ok: true, state: { ...state, setlist } };
+    }
+
+    case 'taste': {
+      if (state.phase !== 'lobby' && state.phase !== 'finished') return fail('The game is already running.');
+      const setlist = state.setlist ?? CLASSIC;
+      if (setlist.mode !== 'crowd') return fail('The host is picking the songs.');
+      if (!state.players.some((p) => p.id === action.playerId)) return fail('You are not in this room.');
+      const picks = { ...setlist.picks, [action.playerId]: action.taste };
+      return { ok: true, state: { ...state, setlist: { ...setlist, picks } } };
     }
 
     case 'tick':
