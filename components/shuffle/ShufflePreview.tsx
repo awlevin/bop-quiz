@@ -3,8 +3,10 @@
 import { type CSSProperties, useCallback, useEffect, useState } from 'react';
 
 import { Key, Wordmark } from '@/components/ds';
+import { describeTaste } from '@/components/setlist/TasteChips';
 import type { DrawnRound, GameDraw } from '@/lib/catalog/preview';
 import { KINDS } from '@/lib/game/kinds';
+import { GENRE_FAMILIES, SETLIST_MODES, type SetlistMode } from '@/lib/game/setlist';
 import type { QuestionKind, Song } from '@/lib/game/types';
 
 import styles from './shuffle.module.css';
@@ -82,15 +84,17 @@ function SongCard({ song, tab, asked, index }: SongCardProps) {
 
 export function ShufflePreview({ initial }: { initial: GameDraw }) {
   const [draw, setDraw] = useState(initial);
+  const [mode, setMode] = useState<SetlistMode>(initial.mode);
   const [count, setCount] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const shuffle = useCallback(async () => {
+  const shuffle = useCallback(async (next: SetlistMode = mode) => {
     setBusy(true);
     setError('');
+    setMode(next);
     try {
-      const res = await fetch('/api/shuffle', { cache: 'no-store' });
+      const res = await fetch(`/api/shuffle?mode=${next}`, { cache: 'no-store' });
       if (!res.ok) throw new Error(`The server said ${res.status}.`);
       setDraw((await res.json()) as GameDraw);
       setCount((n) => n + 1);
@@ -99,7 +103,7 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [mode]);
 
   // Space or R draws again, so a run of shuffles needs no mouse.
   useEffect(() => {
@@ -119,8 +123,9 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
   const asked = draw.rounds.map((r) => r.song);
   const decades = tally(asked, decade, byDecade);
   const genres = tally(asked, (s) => s.genre);
+  const familyLabel = (id: string) => GENRE_FAMILIES.find((g) => g.id === id)?.label ?? id;
+  const families = tally(asked, (s) => familyLabel(draw.families?.[s.id] ?? ''));
   const [opener, ...encores] = draw.finales;
-  const firstAlbum = draw.rounds.findIndex((r) => r.kind === 'album');
 
   return (
     <main className={styles.page}>
@@ -131,8 +136,8 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
       <h1 className={styles.title}>Shuffle preview</h1>
       <p className={styles.lead}>
         Each draw is what pressing Start would have queued for a fresh room: ten questions, three
-        spares, the reprises the album rounds pick from, and the finale. No artist twice, and any
-        song with an open report sits out.
+        spares, and the finale. No artist twice, and any song with an open report sits out. The
+        Crowd picks and Host picks setlists draw for a few made-up picks.
       </p>
 
       <div className={styles.controls}>
@@ -145,17 +150,52 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
             Press <kbd>space</kbd> or <kbd>R</kbd>
           </small>
         </span>
+        <span className={styles.modes} role="radiogroup" aria-label="Setlist mode">
+          {SETLIST_MODES.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="radio"
+              aria-checked={mode === m.id}
+              className={styles.mode}
+              disabled={busy}
+              onClick={() => void shuffle(m.id)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </span>
         <p role="alert" className={styles.error} data-error={Boolean(error)}>
           {error}
         </p>
       </div>
 
       <div className={styles.spread} aria-label="This draw at a glance">
+        {draw.picks?.length > 0 && (
+          <>
+            <span className={styles.spreadLabel}>Picks</span>
+            <span className={styles.tally}>
+              {draw.picks.map((p) => (
+                <span key={p.who}>
+                  <b>{p.who}</b> {describeTaste(p.taste)}
+                </span>
+              ))}
+            </span>
+          </>
+        )}
         <span className={styles.spreadLabel}>Decades</span>
         <span className={styles.tally}>
           {decades.map(([d, n]) => (
             <span key={d}>
               {d.slice(2)} <b>×{n}</b>
+            </span>
+          ))}
+        </span>
+        <span className={styles.spreadLabel}>Families</span>
+        <span className={styles.tally}>
+          {families.map(([g, n]) => (
+            <span key={g}>
+              {g} <b>×{n}</b>
             </span>
           ))}
         </span>
@@ -207,29 +247,6 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
           </ol>
         </section>
 
-        {draw.reprises.length > 0 && (
-          <section className={styles.group} data-tone="album">
-            <h2 className={styles.groupTitle}>
-              <span className={styles.groupKind}>Reprises</span>
-              <span className={styles.groupRange}>
-                One more song by each artist from rounds 1–{firstAlbum}. Just before the album
-                rounds, the ones whose artists the most people got right take those rounds
-              </span>
-            </h2>
-            <ol className={styles.cards}>
-              {draw.reprises.map((song, i) => (
-                <SongCard
-                  key={song.id}
-                  song={song}
-                  tab={`R${i + 1}`}
-                  asked="album"
-                  index={draw.rounds.length + draw.spares.length + i}
-                />
-              ))}
-            </ol>
-          </section>
-        )}
-
         {opener && (
           <section className={styles.group}>
             <h2 className={styles.groupTitle}>
@@ -237,11 +254,7 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
               <span className={styles.groupRange}>Plays over the final scores</span>
             </h2>
             <ol className={styles.cards}>
-              <SongCard
-                song={opener}
-                tab="♪"
-                index={draw.rounds.length + draw.spares.length + draw.reprises.length}
-              />
+              <SongCard song={opener} tab="♪" index={draw.rounds.length + draw.spares.length} />
             </ol>
             {encores.length > 0 && (
               <p className={styles.encores}>

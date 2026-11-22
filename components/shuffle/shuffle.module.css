@@ -301,3 +301,34 @@
     grid-template-columns: 2rem 4.5rem 1fr;
   }
 }
+
+/* --- Setlist modes ------------------------------------------------------ */
+
+.modes {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 99em;
+  background: var(--booth-lift);
+}
+
+.mode {
+  padding: 0.35rem 0.9rem;
+  border: 0;
+  border-radius: 99em;
+  background: none;
+  color: var(--chrome);
+  font-family: var(--font-strip), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.mode[aria-checked='true'] {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.mode:disabled {
+  cursor: progress;
+}

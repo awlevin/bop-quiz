@@ -1,3 +1,4 @@
+import { CLASSIC } from './setlist';
 import type { RoomState, RoomView, RoundView } from './types';
 
 export type Viewer = { role: 'host' } | { role: 'player'; playerId: string };
@@ -31,6 +32,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     }
   }
 
+  const setlist = state.setlist ?? CLASSIC;
   const view: RoomView = {
     code: state.code,
     version: state.version,
@@ -45,8 +47,19 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     round: roundView,
     pause: state.pause ?? null,
     audioChecked: state.audioChecked !== false,
+    setlist: { mode: setlist.mode },
     serverNow: now,
   };
+
+  if (viewer.role === 'host') {
+    view.setlist.host = setlist.host;
+    // Only the picks of players still here: someone who left no longer counts.
+    if (setlist.mode === 'crowd') {
+      view.setlist.picks = Object.fromEntries(
+        state.players.flatMap((p) => (setlist.picks[p.id] ? [[p.id, setlist.picks[p.id]]] : [])),
+      );
+    }
+  }
 
   const lastRound = state.roundIndex === state.rounds.length - 1;
   if (viewer.role === 'host' && revealed && lastRound && state.finales?.length) {
@@ -65,6 +78,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       answer: mine
         ? { text: mine.text, elapsedMs: mine.elapsedMs, gaveUp: Boolean(mine.gaveUp) }
         : null,
+      taste: setlist.picks[viewer.playerId] ?? null,
     };
   }
   return view;

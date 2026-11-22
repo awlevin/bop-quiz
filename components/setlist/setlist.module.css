@@ -1,0 +1,109 @@
+/* Genre and decade picks, on the phones and on the TV. Sized in em, so each
+ * screen sets the scale with its own font-size. */
+
+.chips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45em;
+}
+
+.chip {
+  min-height: 2.4em;
+  padding: 0.3em 0.85em;
+  border: 0.1em solid var(--booth-line);
+  border-radius: 99em;
+  background: transparent;
+  color: var(--chrome);
+  font-family: var(--font-strip), sans-serif;
+  font-size: 1em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    color 160ms,
+    border-color 160ms,
+    transform 160ms var(--ease-spring);
+}
+
+.chip:hover {
+  border-color: var(--chrome);
+  color: var(--paper);
+}
+
+.chip:active {
+  transform: translateY(0.08em) scale(0.97);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0.2em 0 var(--paper-shade);
+}
+
+/* A read-only tally: what the room asked for, brighter the more people did. */
+
+.tally {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45em;
+}
+
+.tallyItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: 2.1em;
+  padding: 0.2em 0.35em 0.2em 0.8em;
+  border-radius: 99em;
+  background: color-mix(in srgb, var(--paper) calc(var(--share) * 100%), var(--booth-lift));
+  color: var(--ink);
+  font-family: var(--font-strip), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tallyItem[data-faint='true'] {
+  color: var(--paper);
+}
+
+.tallyItem b {
+  display: grid;
+  place-items: center;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 0.3em;
+  border-radius: 99em;
+  background: var(--tone);
+  color: var(--tone-ink);
+  font-size: 0.85em;
+}
+
+/* The phone's picker, in the lobby. */
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.pickerNote {
+  font-size: 0.92rem;
+  line-height: 1.35;
+  color: var(--chrome);
+  text-wrap: pretty;
+}

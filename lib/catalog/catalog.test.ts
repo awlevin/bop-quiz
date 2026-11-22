@@ -17,6 +17,19 @@ describe('shuffle preview', () => {
     expect(draw.finales.some((f) => ids.includes(f.id))).toBe(false);
   });
 
+  it('draws for sample picks in the other setlist modes', async () => {
+    const draw = await drawGame('host');
+    expect(draw.mode).toBe('host');
+    expect(draw.picks).toHaveLength(1);
+    const asked = draw.rounds.map((r) => r.song);
+    // The sample host wants 90s and 00s hip-hop: most of a game, at least.
+    const hits = asked.filter(
+      (s) => draw.families[s.id] === 'hiphop' && s.year >= 1990 && s.year < 2010,
+    );
+    expect(hits.length).toBeGreaterThanOrEqual(5);
+    expect((await drawGame()).picks).toEqual([]);
+  });
+
   it('draws a different game each time', async () => {
     const a = await drawGame();
     const b = await drawGame();

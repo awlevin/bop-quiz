@@ -3,14 +3,26 @@
 // what pressing Start would have produced.
 
 import { ROUND_KINDS, ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
+import type { GenreFamily, SetlistMode, Taste } from '@/lib/game/setlist';
 import type { QuestionKind, Song } from '@/lib/game/types';
 
-import { drawSongs } from './index';
+import { drawSongs, songFamily } from './index';
 
 export interface DrawnRound {
   kind: QuestionKind;
   song: Song;
 }
+
+/** Made-up picks, so the page can show what each setlist mode draws. */
+export const SAMPLE_PICKS: Record<SetlistMode, { who: string; taste: Taste }[]> = {
+  classic: [],
+  crowd: [
+    { who: 'Ana', taste: { genres: ['rock', 'alt'], decades: [1980, 1990] } },
+    { who: 'Ben', taste: { genres: ['pop'], decades: [2010, 2020] } },
+    { who: 'Cy', taste: { genres: ['rnb'], decades: [1960, 1970] } },
+  ],
+  host: [{ who: 'The host', taste: { genres: ['hiphop'], decades: [1990, 2000] } }],
+};
 
 export interface GameDraw {
   /** In playing order, each with the question it would have asked. */
@@ -19,23 +31,34 @@ export interface GameDraw {
   spares: Song[];
   /** In the order they would play over the final scores. */
   finales: Song[];
-  /** What the album rounds may become, depending on who gets what right. */
-  reprises: Song[];
+  /** The setlist mode drawn for, and the sample picks it followed. */
+  mode: SetlistMode;
+  picks: { who: string; taste: Taste }[];
+  /** Each drawn song's genre family, by id. */
+  families: Record<number, GenreFamily>;
   drawnAt: number;
 }
 
-export function layOut(songs: Song[], finales: Song[], reprises: Song[], drawnAt: number): GameDraw {
+export function layOut(
+  songs: Song[],
+  finales: Song[],
+  drawnAt: number,
+  mode: SetlistMode = 'classic',
+): GameDraw {
   return {
     rounds: ROUND_KINDS.map((kind, i) => ({ kind, song: songs[i] })),
     spares: songs.slice(ROUNDS_PER_GAME),
     finales,
-    reprises,
+    mode,
+    picks: SAMPLE_PICKS[mode],
+    families: Object.fromEntries(songs.map((s) => [s.id, songFamily(s)])),
     drawnAt,
   };
 }
 
 /** A fresh room's first game: nothing heard yet, no finale to avoid. */
-export async function drawGame(): Promise<GameDraw> {
-  const { songs, finales, reprises } = await drawSongs(ROUNDS_PER_GAME + SPARE_SONGS, []);
-  return layOut(songs, finales, reprises, Date.now());
+export async function drawGame(mode: SetlistMode = 'classic'): Promise<GameDraw> {
+  const tastes = SAMPLE_PICKS[mode].map((p) => p.taste);
+  const { songs, finales } = await drawSongs(ROUNDS_PER_GAME + SPARE_SONGS, [], undefined, tastes);
+  return layOut(songs, finales, Date.now(), mode);
 }

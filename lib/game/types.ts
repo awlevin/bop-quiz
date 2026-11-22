@@ -4,6 +4,8 @@
 // never see it: they get a RoomView, built per recipient by `views.ts`, which
 // holds back the answer until the reveal.
 
+import type { Setlist, SetlistMode, Taste } from './setlist';
+
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
 
 export type Phase = 'lobby' | 'loading' | 'guessing' | 'reveal' | 'finished';
@@ -59,12 +61,6 @@ export interface RoomState {
   roundIndex: number;
   /** Swapped in when a preview refuses to play. */
   spares: Song[];
-  /**
-   * One more song by each artist heard in the early rounds. On the way into
-   * the album rounds the game picks from these, by who got what right, so
-   * the album questions are about artists people in the room know.
-   */
-  reprises: Song[];
   /** What the host plays over the final scores, in order, each fading into the next. */
   finales: Song[];
   /** Set while someone has the game paused. Every deadline waits for it. */
@@ -79,6 +75,8 @@ export interface RoomState {
    * Absent in rooms made before the check, which start as they always did.
    */
   audioChecked?: boolean;
+  /** Where the songs come from. Absent in rooms older than setlist modes: Classic. */
+  setlist?: Setlist;
   createdAt: number;
 }
 
@@ -86,7 +84,7 @@ export type Action =
   | { type: 'join'; playerId: string; token: string; name: string }
   | { type: 'rename'; playerId: string; name: string }
   | { type: 'remove-player'; playerId: string }
-  | { type: 'start'; songs: Song[]; spares: Song[]; finales?: Song[]; reprises?: Song[] }
+  | { type: 'start'; songs: Song[]; spares: Song[]; finales?: Song[] }
   | { type: 'pause'; by: string }
   | { type: 'resume' }
   | { type: 'audio-started'; roundIndex: number }
@@ -97,7 +95,11 @@ export type Action =
   | { type: 'audio-check' }
   /** Back to the lobby from a paused game. `playerId` is null from the host screen; a phone must be the leader's. */
   | { type: 'end-game'; playerId: string | null }
-  | { type: 'tick' };
+  | { type: 'tick' }
+  /** The host's setlist mode and picks, between games. */
+  | { type: 'setlist'; mode: SetlistMode; taste: Taste }
+  /** A player's picks for Crowd picks, between games. */
+  | { type: 'taste'; playerId: string; taste: Taste };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
 
@@ -149,6 +151,13 @@ export interface RoomView {
   lobbyUrl?: string;
   /** False until the host screen's sound has been checked; starting waits for it. */
   audioChecked: boolean;
+  setlist: {
+    mode: SetlistMode;
+    /** Host only: the TV's own picks. */
+    host?: Taste;
+    /** Host only, in Crowd picks: what each player still in the room has picked, by id. */
+    picks?: Record<string, Taste>;
+  };
   /** Players only. */
   you?: {
     id: string;
@@ -156,6 +165,8 @@ export interface RoomView {
     leader: boolean;
     /** What this player locked in. Whether it was right waits for the reveal. */
     answer: { text: string; elapsedMs: number; gaveUp: boolean } | null;
+    /** This player's Crowd picks, or null before they pick. */
+    taste: Taste | null;
   };
   /** Server clock when this view was built; screens derive their offset from it. */
   serverNow: number;
