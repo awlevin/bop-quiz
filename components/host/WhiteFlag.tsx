@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-
 import { TitleStrip } from '@/components/ds';
-import type { Jukebox } from '@/lib/client/jukebox';
 import type { QuestionKind } from '@/lib/game/types';
 
 import styles from './host.module.css';
@@ -34,12 +31,10 @@ interface Props {
   /** Flags that land together fan out instead of stacking. */
   slot: number;
   tone: QuestionKind;
-  jukebox: Jukebox | null;
 }
 
-/** Someone gave up. The room should know. Drops in, hangs its head, falls off. */
-export function WhiteFlag({ name, seed, slot, tone, jukebox }: Props) {
-  useEffect(() => jukebox?.womp(), [jukebox]);
+/** Someone gave up. The room should see it: drops in, hangs its head, falls off. Silently. */
+export function WhiteFlag({ name, seed, slot, tone }: Props) {
   return (
     <div className={styles.flag} style={{ '--slot': slot } as React.CSSProperties} role="status">
       <TitleStrip tone={tone} top={name} label="Gave up" bottom={pick(seed)} />

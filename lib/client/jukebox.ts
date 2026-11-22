@@ -343,41 +343,6 @@ export class Jukebox {
     return this.spectrum;
   }
 
-  /**
-   * A sad trombone, synthesised: four falling notes, the last one sagging.
-   * It plays over the song without touching it.
-   */
-  womp(): void {
-    const context = this.context;
-    if (!context || context.state !== 'running') return;
-    const out = context.createGain();
-    out.gain.value = 0.22;
-    const mute = context.createBiquadFilter();
-    mute.type = 'lowpass';
-    mute.frequency.value = 900;
-    mute.connect(out).connect(context.destination);
-
-    const notes = [233.1, 220, 207.7, 196];
-    let at = context.currentTime + 0.05;
-    notes.forEach((hz, i) => {
-      const last = i === notes.length - 1;
-      const length = last ? 1.1 : 0.34;
-      const horn = context.createOscillator();
-      horn.type = 'sawtooth';
-      horn.frequency.setValueAtTime(hz, at);
-      if (last) horn.frequency.exponentialRampToValueAtTime(hz * 0.84, at + length);
-      const envelope = context.createGain();
-      envelope.gain.setValueAtTime(0, at);
-      envelope.gain.linearRampToValueAtTime(1, at + 0.04);
-      envelope.gain.setValueAtTime(1, at + length - 0.08);
-      envelope.gain.linearRampToValueAtTime(0, at + length);
-      horn.connect(envelope).connect(mute);
-      horn.start(at);
-      horn.stop(at + length + 0.02);
-      at += length + 0.03;
-    });
-  }
-
   stop(): void {
     this.playlistRun++;
     this.stopRunout();

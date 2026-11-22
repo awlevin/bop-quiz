@@ -614,7 +614,6 @@ function Game({
               seed={`${p.id}:${round.index}`}
               slot={i}
               tone={round.kind}
-              jukebox={director.jukebox}
             />
           ))}
 

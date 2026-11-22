@@ -41,7 +41,7 @@ plays from where they are sitting. Nothing to install, no accounts.
    rounds, then the final scores with a song to see them out.
 
 Nobody knows it? Hit **Give up** to tap out of the round. A white flag drops
-onto the television and a sad trombone plays.
+onto the television.
 
 ### Playing alone
 

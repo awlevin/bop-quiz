@@ -338,14 +338,14 @@ function Round({
         {song ? (
           <Reveal view={view} dispatch={dispatch} onFeedback={onFeedback} />
         ) : (
-          <Ask key={round.index} view={view} director={director} dispatch={dispatch} />
+          <Ask key={round.index} view={view} dispatch={dispatch} />
         )}
       </section>
     </div>
   );
 }
 
-function Ask({ view, director, dispatch }: { view: RoomView; director: Director; dispatch: Dispatch }) {
+function Ask({ view, dispatch }: { view: RoomView; dispatch: Dispatch }) {
   const round = view.round!;
   const info = KINDS[round.kind];
   const guessing = view.phase === 'guessing' && round.guessStartedAt !== null;
@@ -366,8 +366,7 @@ function Ask({ view, director, dispatch }: { view: RoomView; director: Director;
   };
 
   const giveUp = () => {
-    const result = dispatch({ type: 'give-up', playerId: SOLO_PLAYER_ID });
-    if (result.ok) director.jukebox?.womp();
+    dispatch({ type: 'give-up', playerId: SOLO_PLAYER_ID });
   };
 
   return (
