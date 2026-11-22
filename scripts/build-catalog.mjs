@@ -30,8 +30,13 @@
 // `validate` is clean.
 //
 // The search API allows roughly 20 requests a minute, so every response is
-// cached on disk and a re-run never re-fetches. A full build of ~1,200 songs
-// takes about an hour of wall time; run it in the background.
+// cached on disk and a re-run never re-fetches. Songs already in
+// data/catalog.json are pinned and never fetched, so only new seeds cost a
+// request; a large batch takes a while, so run it in the background.
+//
+// The seed is the 200 songs players know best. A 1,174-song version was tried
+// (commit 3a9e27c) and rolled back: rooms did not recognise the deep cuts.
+// Keep additions to songs a room full of people would sing along to.
 //
 // Files (all next to this script unless noted):
 //   catalog-seed.json     input seed list
