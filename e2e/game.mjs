@@ -79,9 +79,19 @@ const silent = async () => {
   }
 };
 
+// Nobody starts until the TV has played its test sound and someone heard it.
+const anaStart = phones[0].page.getByRole('button', { name: 'Start game' });
+await phones[0].page.getByText('Waiting for the big screen to check its sound.').waitFor();
+if (!(await anaStart.isDisabled())) problems.push('a phone could start before the sound check');
+await host.getByRole('button', { name: 'Play test sound' }).click();
+await host.getByRole('button', { name: 'I heard it' }).waitFor();
+await host.screenshot({ path: `${SHOTS}03-host-sound-check.png` });
+await host.getByRole('button', { name: 'I heard it' }).click();
+await host.getByRole('region', { name: 'Sound check' }).waitFor({ state: 'detached' });
+
 // Ana was first in, so she runs the game from her phone.
 await phones[1].page.getByText('Ana starts the game').waitFor();
-await phones[0].page.getByRole('button', { name: 'Start game' }).click();
+await anaStart.click();
 
 for (let round = 0; round < ROUNDS; round++) {
   await host.getByText(/Get ready to name the/).waitFor();

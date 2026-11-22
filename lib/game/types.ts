@@ -73,6 +73,12 @@ export interface RoomState {
   lobbyUrl: string | null;
   /** Every song this room has heard, so "play again" never repeats one. */
   playedSongIds: number[];
+  /**
+   * Someone at the host screen heard its test sound. No game starts until
+   * they have, and it holds for the life of the room, back in the lobby too.
+   * Absent in rooms made before the check, which start as they always did.
+   */
+  audioChecked?: boolean;
   createdAt: number;
 }
 
@@ -88,6 +94,7 @@ export type Action =
   | { type: 'answer'; playerId: string; text: string }
   | { type: 'give-up'; playerId: string }
   | { type: 'next'; roundIndex: number }
+  | { type: 'audio-check' }
   | { type: 'tick' };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
@@ -138,6 +145,8 @@ export interface RoomView {
   pause: { at: number; by: string } | null;
   /** Host only, in the lobby: music to join by. */
   lobbyUrl?: string;
+  /** False until the host screen's sound has been checked; starting waits for it. */
+  audioChecked: boolean;
   /** Players only. */
   you?: {
     id: string;

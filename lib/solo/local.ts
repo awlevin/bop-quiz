@@ -22,7 +22,9 @@ export interface SoloDraw {
 
 /** A room of one, already joined, waiting in the lobby. */
 export function createSoloRoom(now: number, heard: readonly number[] = []): RoomState {
-  const empty = { ...createRoom('SOLO', 'solo', now), playedSongIds: [...heard] };
+  // The player pressing Play is the one listening, on the screen that plays:
+  // there is no far-off TV to check.
+  const empty = { ...createRoom('SOLO', 'solo', now), playedSongIds: [...heard], audioChecked: true };
   const result = reduce(
     empty,
     { type: 'join', playerId: SOLO_PLAYER_ID, token: 'solo', name: SOLO_PLAYER_NAME },

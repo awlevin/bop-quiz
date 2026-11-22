@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { chooseFinales, chooseReprises, chooseSongs } from '@/lib/catalog';
+import { createSoloRoom } from '@/lib/solo/local';
 
 import { ANSWER_GRACE_MS, GUESS_MS, REVEAL_MS, ROUND_KINDS, ROUNDS_PER_GAME } from './config';
 import { leadArtist, matchesArtist, matchesText, parseYear } from './match';
@@ -33,12 +34,13 @@ function run(state: RoomState, action: Action, now: number): RoomState {
   return result.state;
 }
 
-function lobbyWith(names: string[]): RoomState {
+/** A lobby with these players in it, its sound already checked unless `checked` is false. */
+function lobbyWith(names: string[], { checked = true } = {}): RoomState {
   let state = createRoom('ABCD', 'host-token', 0);
   names.forEach((name, i) => {
     state = run(state, { type: 'join', playerId: `p${i}`, token: `t${i}`, name }, 0);
   });
-  return state;
+  return checked ? run(state, { type: 'audio-check' }, 0) : state;
 }
 
 function guessing(names: string[], now = 1000): RoomState {
@@ -255,6 +257,34 @@ describe('room', () => {
     expect(state.phase).toBe('loading');
     expect(state.players[0].score).toBe(0);
     expect(state.playedSongIds).toHaveLength(ROUNDS_PER_GAME * 2);
+  });
+});
+
+describe('sound check', () => {
+  it('holds the start until the host screen has heard its test sound', () => {
+    let state = lobbyWith(['Ana'], { checked: false });
+    expect(state.audioChecked).toBe(false);
+    expect(viewFor(state, { role: 'player', playerId: 'p0' }, 0).audioChecked).toBe(false);
+    const refused = reduce(state, { type: 'start', songs: SONGS, spares: SPARES }, 10);
+    expect(refused).toEqual({ ok: false, error: 'Check the sound on the big screen first.' });
+
+    state = run(state, { type: 'audio-check' }, 20);
+    expect(viewFor(state, { role: 'host' }, 20).audioChecked).toBe(true);
+    // A second confirmation changes nothing, so nobody's screen redraws for it.
+    expect(run(state, { type: 'audio-check' }, 30)).toBe(state);
+    expect(run(state, { type: 'start', songs: SONGS, spares: SPARES }, 40).phase).toBe('loading');
+  });
+
+  it('lets a room from before the check start as it always did', () => {
+    const legacy: RoomState = { ...lobbyWith(['Ana'], { checked: false }) };
+    delete legacy.audioChecked;
+    expect(viewFor(legacy, { role: 'host' }, 0).audioChecked).toBe(true);
+    expect(run(legacy, { type: 'start', songs: SONGS, spares: SPARES }, 10).phase).toBe('loading');
+  });
+
+  it('never asks a solo game', () => {
+    const solo = createSoloRoom(0);
+    expect(run(solo, { type: 'start', songs: SONGS, spares: SPARES }, 10).phase).toBe('loading');
   });
 });
 

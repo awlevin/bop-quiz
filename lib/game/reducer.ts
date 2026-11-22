@@ -39,6 +39,7 @@ export function createRoom(
     pause: null,
     lobbyUrl,
     playedSongIds: [],
+    audioChecked: false,
     createdAt: now,
   };
 }
@@ -205,6 +206,8 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
         return fail('The game is already running.');
       }
       if (state.players.length === 0) return fail('Wait for a player to join first.');
+      // `false`, not falsy: a room from before the sound check starts as it always did.
+      if (state.audioChecked === false) return fail('Check the sound on the big screen first.');
       if (action.songs.length < ROUND_KINDS.length) return fail('Not enough songs to start.');
       return {
         ok: true,
@@ -322,6 +325,11 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
         return { ok: true, state };
       }
       return { ok: true, state: advance(state) };
+    }
+
+    case 'audio-check': {
+      if (state.audioChecked) return { ok: true, state };
+      return { ok: true, state: { ...state, audioChecked: true } };
     }
 
     case 'tick':

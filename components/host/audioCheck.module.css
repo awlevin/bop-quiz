@@ -1,0 +1,100 @@
+/* The lobby's sound check: one quiet row under the players, not a gate across the screen. */
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0.7em 0.8em 0.7em 1em;
+  border: 0.1em dashed var(--booth-line);
+  border-radius: var(--radius-strip);
+  animation: arrive 300ms var(--ease-out) both;
+}
+
+.check[data-status='asking'] {
+  border-style: solid;
+  border-color: var(--butter);
+}
+
+.icon {
+  flex: none;
+  width: 1.7em;
+  height: 1.7em;
+  color: var(--butter);
+}
+
+.check[data-status='playing'] .icon {
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.text h3 {
+  font-family: var(--font-strip), sans-serif;
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--butter);
+}
+
+.text p {
+  font-size: 0.95em;
+  line-height: 1.3;
+  color: var(--chrome);
+}
+
+.keys {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.6em;
+}
+
+.keys > button[data-variant] {
+  min-height: 2.4em;
+  padding: 0 1.1em;
+  font-size: 0.95em;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chrome);
+  font-size: 1.1em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--booth-lift);
+  color: var(--paper);
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+}
+
+@keyframes pulse {
+  to {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .check,
+  .check[data-status='playing'] .icon {
+    animation: none;
+  }
+}

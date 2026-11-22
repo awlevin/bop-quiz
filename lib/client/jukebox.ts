@@ -12,9 +12,10 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 /** -60 dB. An exponential ramp cannot reach zero, so fades run to here and then cut. */
 const SILENCE = 0.001;
 
-/** A twentieth of a second of silence, as a WAV file. */
-function silence(): string {
-  const samples = 2205;
+/** A wave as a 16-bit mono WAV file, `seconds` long, sample by sample. */
+function wav(seconds: number, sample: (t: number) => number): string {
+  const rate = 44100;
+  const samples = Math.floor(rate * seconds);
   const bytes = new Uint8Array(44 + samples * 2);
   const view = new DataView(bytes.buffer);
   const text = (at: number, s: string) => [...s].forEach((c, i) => view.setUint8(at + i, c.charCodeAt(0)));
@@ -24,13 +25,40 @@ function silence(): string {
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, 1, true);
-  view.setUint32(24, 44100, true);
-  view.setUint32(28, 88200, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true);
   view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
   text(36, 'data');
   view.setUint32(40, samples * 2, true);
+  for (let i = 0; i < samples; i++) {
+    const value = Math.max(-1, Math.min(1, sample(i / rate)));
+    view.setInt16(44 + i * 2, Math.round(value * 32767), true);
+  }
   return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+}
+
+/** A twentieth of a second of silence. */
+function silence(): string {
+  return wav(0.05, () => 0);
+}
+
+/** The sound check: four rising bell notes, a major arpeggio, ringing out. */
+function chimeClip(): string {
+  const notes = [523.25, 659.25, 783.99, 1046.5];
+  const step = 0.16;
+  return wav(1.9, (t) => {
+    let sum = 0;
+    notes.forEach((hz, i) => {
+      const at = t - i * step;
+      if (at < 0) return;
+      const attack = Math.min(at / 0.006, 1);
+      const ring = Math.exp(-at * 3.2);
+      // A bell is mostly its note, with a little of the octave above.
+      sum += attack * ring * (Math.sin(2 * Math.PI * hz * at) + 0.25 * Math.sin(4 * Math.PI * hz * at));
+    });
+    return sum * 0.28;
+  });
 }
 
 interface Deck {
@@ -66,6 +94,8 @@ export class Jukebox {
   private live = 0;
   private context: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
+  /** Both decks pass through this on the way out, so the sound check can duck the music without touching a fade. */
+  private music: GainNode | null = null;
   private spectrum: Uint8Array<ArrayBuffer> | null = null;
   private prefetcher: HTMLAudioElement | null = null;
   private primed = false;
@@ -76,6 +106,8 @@ export class Jukebox {
   private resumeOnRelease = false;
   private runout: { source: AudioBufferSourceNode; gain: GainNode } | null = null;
   private unlocking: Promise<void> | null = null;
+  /** The sound check's own player, wired into the same graph as the decks. */
+  private chimer: HTMLAudioElement | null = null;
 
   /**
    * Browsers only let sound start from a click. Call this from one; after
@@ -97,12 +129,15 @@ export class Jukebox {
       analyser.fftSize = 256;
       analyser.smoothingTimeConstant = 0.82;
       analyser.connect(context.destination);
+      const music = context.createGain();
+      music.connect(analyser);
       for (const deck of this.decks) {
         deck.gain = context.createGain();
         deck.gain.gain.value = 0;
-        context.createMediaElementSource(deck.audio).connect(deck.gain).connect(analyser);
+        context.createMediaElementSource(deck.audio).connect(deck.gain).connect(music);
       }
       this.context = context;
+      this.music = music;
       this.analyser = analyser;
       this.spectrum = new Uint8Array(analyser.frequencyBinCount);
     }
@@ -341,6 +376,46 @@ export class Jukebox {
     if (!this.analyser || !this.spectrum) return null;
     this.analyser.getByteFrequencyData(this.spectrum);
     return this.spectrum;
+  }
+
+  /**
+   * The sound check: a short chime through the same graph as every song, with
+   * whatever is playing ducked under it and brought back after. Resolves when
+   * the chime has rung out. Call after `unlock`.
+   */
+  async chime(): Promise<void> {
+    const context = this.context;
+    const music = this.music;
+    if (!context || !this.analyser || !music) throw new Error('Sound is not on yet.');
+    if (!this.chimer) {
+      this.chimer = new Audio(chimeClip());
+      context.createMediaElementSource(this.chimer).connect(this.analyser);
+    }
+    const audio = this.chimer;
+    const duck = (to: number, seconds: number) => {
+      const now = context.currentTime;
+      music.gain.cancelScheduledValues(now);
+      music.gain.setValueAtTime(music.gain.value, now);
+      music.gain.linearRampToValueAtTime(to, now + seconds);
+    };
+    // Lobby music, or a song starting meanwhile, sits under the chime.
+    duck(0.15, 0.25);
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+      await audio.play();
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          clearTimeout(timer);
+          audio.removeEventListener('ended', done);
+          resolve();
+        };
+        const timer = setTimeout(done, 4000);
+        audio.addEventListener('ended', done);
+      });
+    } finally {
+      duck(1, 0.8);
+    }
   }
 
   stop(): void {

@@ -21,7 +21,9 @@ plays from where they are sitting. Nothing to install, no accounts.
 
 1. **Put one screen in front of everyone.** A laptop on the coffee table, or
    mirrored to the TV. Press *Host a game*. The screen prints a QR code and a
-   four-letter room code, and it is the only thing that makes noise.
+   four-letter room code, and it is the only thing that makes noise. Before
+   the first game it plays a short chime, and someone at the screen confirms
+   they heard it: the game cannot start until they have, once per room.
 2. **Everyone joins from their phone.** Scan, type a name, wait. Up to twelve
    players. Whoever joined first runs the game and presses *Start* from their
    phone when the room is full enough; after that anybody can push the room on

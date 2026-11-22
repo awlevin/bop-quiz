@@ -60,6 +60,8 @@ export async function POST(
   // The TV can start a game, and so can the first player, from their phone.
   const leader = viewer.role === 'player' && room.players[0]?.id === viewer.playerId;
   if (body.type === 'start' && (viewer.role === 'host' || leader)) {
+    // The reducer refuses too; this just skips drawing songs for nothing.
+    if (room.audioChecked === false) return refuse(409, 'Check the sound on the big screen first.');
     const { songs, finales, reprises } = await pickSongs(
       ROUNDS_PER_GAME + SPARE_SONGS,
       room.playedSongIds,
@@ -75,6 +77,8 @@ export async function POST(
   }
 
   if (viewer.role === 'host') {
+    // Only the host screen plays sound, so only it can say it was heard.
+    if (body.type === 'audio-check') action = { type: 'audio-check' };
     if (body.type === 'audio-started') action = { type: 'audio-started', roundIndex };
     if (body.type === 'audio-failed') action = { type: 'audio-failed', roundIndex };
     if (body.type === 'remove-player' && body.playerId) {

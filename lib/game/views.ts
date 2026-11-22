@@ -44,6 +44,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     })),
     round: roundView,
     pause: state.pause ?? null,
+    audioChecked: state.audioChecked !== false,
     serverNow: now,
   };
 

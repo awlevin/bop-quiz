@@ -27,6 +27,7 @@ import { KINDS } from '@/lib/game/kinds';
 import { rankPlayers } from '@/lib/game/rank';
 import type { QuestionKind, RevealedAnswer, RoomView } from '@/lib/game/types';
 
+import { AudioCheck, reopenAudioCheck } from './AudioCheck';
 import { Confetti } from './Confetti';
 import { Halo } from './Halo';
 import styles from './host.module.css';
@@ -252,14 +253,27 @@ function Header({ view }: { view: RoomView }) {
         )}
         {/* Not during play: nothing on the stage should invite a click mid-song. */}
         {(view.phase === 'lobby' || view.phase === 'finished') && (
-          <SettingsMenu code={view.code} songTitle={view.round?.song?.title} />
+          <SettingsMenu
+            code={view.code}
+            songTitle={view.round?.song?.title}
+            soundCheck={view.phase === 'lobby'}
+          />
         )}
       </div>
     </header>
   );
 }
 
-function SettingsMenu({ code, songTitle }: { code: string; songTitle?: string }) {
+function SettingsMenu({
+  code,
+  songTitle,
+  soundCheck,
+}: {
+  code: string;
+  songTitle?: string;
+  /** Offer the lobby's sound check again. */
+  soundCheck?: boolean;
+}) {
   const settings = useSettings();
   const [open, setOpen] = useState(false);
   const [feedback, setFeedback] = useState(false);
@@ -286,6 +300,18 @@ function SettingsMenu({ code, songTitle }: { code: string; songTitle?: string })
             checked={settings.lobbyMusic}
             onChange={(lobbyMusic) => updateSettings({ lobbyMusic })}
           />
+          {soundCheck && (
+            <button
+              type="button"
+              className={styles.settingsLink}
+              onClick={() => {
+                setOpen(false);
+                reopenAudioCheck();
+              }}
+            >
+              Check the sound
+            </button>
+          )}
           <button
             type="button"
             className={styles.settingsLink}
@@ -376,18 +402,26 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
           )}
         </div>
 
+        <AudioCheck view={view} token={token} director={director} />
+
         <div className={styles.lobbyStart}>
-          <Key onClick={() => void start()} disabled={view.players.length === 0 || starting}>
+          <Key
+            onClick={() => void start()}
+            disabled={view.players.length === 0 || starting || !view.audioChecked}
+          >
             {starting ? 'Picking songs…' : 'Start game'}
           </Key>
           <p role="alert">
             {error ||
-              (view.players[0]
-                ? `${view.players[0].name} can also start it from their phone.`
-                : '10 songs. 15 seconds each. Faster answers score more.')}
+              (!view.audioChecked
+                ? 'Check the sound first, then start.'
+                : view.players[0]
+                  ? `${view.players[0].name} can also start it from their phone.`
+                  : '10 songs. 15 seconds each. Faster answers score more.')}
           </p>
         </div>
-        {director.needsClick && (
+        {/* Until the sound check is done, it is the click this asks for. */}
+        {director.needsClick && view.audioChecked && (
           <p className={styles.soundNote}>Click anywhere on this screen once, so it can play sound.</p>
         )}
       </section>

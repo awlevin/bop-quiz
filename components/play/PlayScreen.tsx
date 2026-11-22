@@ -256,11 +256,13 @@ function Room({
 function StartKey({ view, token, label }: { view: RoomView; token: string; label: string }) {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  // The big screen checks its sound once per room before the first game.
+  const waiting = !view.audioChecked;
   return (
     <>
       <Key
         block
-        disabled={starting}
+        disabled={starting || waiting}
         onClick={async () => {
           setStarting(true);
           setError('');
@@ -271,6 +273,7 @@ function StartKey({ view, token, label }: { view: RoomView; token: string; label
       >
         {starting ? 'Picking songs…' : label}
       </Key>
+      {waiting && !error && <p className={styles.small}>Waiting for the big screen to check its sound.</p>}
       {error && (
         <p className={styles.error} role="alert">
           {error}
