@@ -14,6 +14,7 @@ import {
   VinylRecord,
   Wordmark,
 } from '@/components/ds';
+import { EndGame } from '@/components/endgame/EndGame';
 import { FeedbackSheet } from '@/components/feedback/FeedbackSheet';
 import { send } from '@/lib/client/api';
 import { useLinerNote } from '@/lib/client/useLinerNote';
@@ -183,9 +184,11 @@ function Intermission({ view, token }: { view: RoomView; token: string }) {
           </motion.p>
         </AnimatePresence>
       </div>
-      <Key variant="paper" onClick={() => void send(view.code, token, { type: 'resume' })}>
-        Resume
-      </Key>
+      <EndGame code={view.code} token={token}>
+        <Key variant="paper" onClick={() => void send(view.code, token, { type: 'resume' })}>
+          Resume
+        </Key>
+      </EndGame>
     </motion.div>
   );
 }

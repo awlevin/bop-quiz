@@ -76,6 +76,12 @@ export async function POST(
     };
   }
 
+  // Ending a game is the host's call: the TV, or the leader on their phone.
+  if (body.type === 'end-game') {
+    if (viewer.role === 'player' && !leader) return refuse(403, 'Only the host can end the game.');
+    action = { type: 'end-game', playerId: viewer.role === 'host' ? null : viewer.playerId };
+  }
+
   if (viewer.role === 'host') {
     // Only the host screen plays sound, so only it can say it was heard.
     if (body.type === 'audio-check') action = { type: 'audio-check' };

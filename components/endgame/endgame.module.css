@@ -1,0 +1,60 @@
+/* Sits on the dim pause screen, under Resume. Sizes in em: the TV scales it, phones do not. */
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5em;
+  max-width: 30em;
+  padding: 1em 1.4em 1.2em;
+  border: 0.1em solid var(--booth-line);
+  border-radius: var(--radius-strip);
+  text-align: center;
+  animation: open 220ms var(--ease-out) both;
+}
+
+.confirm[data-block='true'] {
+  align-items: stretch;
+  max-width: none;
+  padding: 1em;
+}
+
+.question {
+  font-size: 1.25em;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.detail {
+  color: var(--chrome);
+  text-wrap: balance;
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.8em;
+  margin-top: 0.4em;
+}
+
+.confirm[data-block='true'] .keys {
+  flex-direction: column;
+}
+
+.error {
+  color: var(--bubblegum);
+}
+
+@keyframes open {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm {
+    animation: none;
+  }
+}

@@ -310,12 +310,21 @@ export class Jukebox {
     this.startRunout();
   }
 
-  /** Pick the music up where it stopped. */
-  release(): void {
+  /**
+   * Pick the music up where it stopped. With `resume` false the game it held
+   * is over: the needle lifts and the song stays stopped, so whatever plays
+   * next starts from silence instead of crossfading out of it.
+   */
+  release(resume = true): void {
     if (!this.held) return;
     this.held = false;
     this.stopRunout();
     const deck = this.decks[this.live];
+    if (!resume) {
+      this.ramp(deck, 0, 0);
+      deck.audio.pause();
+      return;
+    }
     if (!this.resumeOnRelease || !deck.audio.src || deck.audio.ended) return;
     void deck.audio.play().then(
       () => this.ramp(deck, deck.volume, 0.5),

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { type FormEvent, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 import { Field, IconButton, Key, PauseIcon, PlayerChip, TitleStrip, Wordmark } from '@/components/ds';
+import { EndGame } from '@/components/endgame/EndGame';
 import { FeedbackSheet } from '@/components/feedback/FeedbackSheet';
 import { send } from '@/lib/client/api';
 import { lastName, seats } from '@/lib/client/storage';
@@ -288,6 +289,11 @@ function PausedView({ view, token }: { view: RoomView; token: string }) {
   const pause = view.pause!;
   const mine = view.players.find((p) => p.id === view.you!.id)?.name === pause.by;
   const { note, index } = useLinerNote(pause.at, pause.by);
+  const resume = (
+    <Key block onClick={() => void send(view.code, token, { type: 'resume' })}>
+      Resume
+    </Key>
+  );
   return (
     <div className={styles.paused} role="dialog" aria-modal aria-label="Game paused">
       <div className={styles.pauseBars} aria-hidden>
@@ -299,9 +305,13 @@ function PausedView({ view, token }: { view: RoomView; token: string }) {
       <p key={index} className={styles.linerNote}>
         {note}
       </p>
-      <Key block onClick={() => void send(view.code, token, { type: 'resume' })}>
-        Resume
-      </Key>
+      {view.you!.leader ? (
+        <EndGame code={view.code} token={token} block>
+          {resume}
+        </EndGame>
+      ) : (
+        resume
+      )}
     </div>
   );
 }

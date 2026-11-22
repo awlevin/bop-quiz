@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "e2e": "node e2e/game.mjs",
-    "e2e:solo": "node e2e/solo.mjs"
+    "e2e:solo": "node e2e/solo.mjs",
+    "e2e:end-game": "node e2e/end-game.mjs"
   },
   "dependencies": {
     "ioredis": "^6.0.0",

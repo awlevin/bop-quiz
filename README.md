@@ -45,6 +45,11 @@ plays from where they are sitting. Nothing to install, no accounts.
 Nobody knows it? Hit **Give up** to tap out of the round. A white flag drops
 onto the television.
 
+Need a break? Any phone can pause the game. From the pause screen the host,
+at the television or on the first player's phone, can also end the game: the
+room goes back to the lobby with everyone still in it and the scores cleared,
+ready for a new game.
+
 ### Playing alone
 
 Nobody around? Press **Quick play** on the landing page, or open

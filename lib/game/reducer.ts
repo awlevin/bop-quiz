@@ -120,6 +120,27 @@ function reprise(state: RoomState): RoomState {
   };
 }
 
+/**
+ * Stop the game where it stands and go back to the lobby. Only the game's own
+ * progress goes: the room, who is in it, and anything it was set up with stay.
+ */
+function backToLobby(state: RoomState): RoomState {
+  // The songs still to come were never heard, so they may come up another time.
+  const unheard = new Set(state.rounds.slice(state.roundIndex + 1).map((r) => r.song.id));
+  return {
+    ...state,
+    phase: 'lobby',
+    rounds: [],
+    roundIndex: 0,
+    spares: [],
+    reprises: [],
+    finales: [],
+    pause: null,
+    players: state.players.map((p) => ({ ...p, score: 0 })),
+    playedSongIds: state.playedSongIds.filter((id) => !unheard.has(id)),
+  };
+}
+
 /** Move past any deadline that `now` has already crossed. */
 export function settle(state: RoomState, now: number): RoomState {
   const round = currentRound(state);
@@ -330,6 +351,15 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
     case 'audio-check': {
       if (state.audioChecked) return { ok: true, state };
       return { ok: true, state: { ...state, audioChecked: true } };
+    }
+
+    case 'end-game': {
+      if (action.playerId !== null && state.players[0]?.id !== action.playerId) {
+        return fail('Only the host can end the game.');
+      }
+      // Ending is offered on the pause screen, so a game that has since resumed carries on.
+      if (!state.pause) return fail('Pause the game before ending it.');
+      return { ok: true, state: backToLobby(state) };
     }
 
     case 'tick':

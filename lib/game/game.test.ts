@@ -288,6 +288,91 @@ describe('sound check', () => {
   });
 });
 
+describe('ending a game', () => {
+  /** Ana and Ben, three songs in and paused, with points on the board. */
+  function pausedMidGame(): RoomState {
+    let state = guessing(['Ana', 'Ben']);
+    let now = 1000;
+    for (let i = 0; i < 3; i++) {
+      if (i > 0) state = run(state, { type: 'audio-started', roundIndex: i }, (now += 100));
+      state = run(state, { type: 'answer', playerId: 'p0', text: `song ${i + 1}` }, (now += 100));
+      state = run(state, { type: 'give-up', playerId: 'p1' }, (now += 100));
+      if (i < 2) state = run(state, { type: 'next', roundIndex: i }, (now += 100));
+    }
+    expect(state).toMatchObject({ phase: 'reveal', roundIndex: 2 });
+    return run(state, { type: 'pause', by: 'Ben' }, (now += 100));
+  }
+
+  it('is for the host screen or the leader, and nobody else', () => {
+    const state = pausedMidGame();
+    expect(reduce(state, { type: 'end-game', playerId: 'p1' }, 9000)).toEqual({
+      ok: false,
+      error: 'Only the host can end the game.',
+    });
+    expect(reduce(state, { type: 'end-game', playerId: 'nobody' }, 9000).ok).toBe(false);
+    expect(run(state, { type: 'end-game', playerId: 'p0' }, 9000).phase).toBe('lobby');
+    expect(run(state, { type: 'end-game', playerId: null }, 9000).phase).toBe('lobby');
+  });
+
+  it('only from the pause screen', () => {
+    const playing = guessing(['Ana']);
+    expect(reduce(playing, { type: 'end-game', playerId: null }, 2000).ok).toBe(false);
+    const lobby = lobbyWith(['Ana']);
+    expect(reduce(lobby, { type: 'end-game', playerId: null }, 2000).ok).toBe(false);
+  });
+
+  it('goes back to the lobby with everyone still in, scores cleared and the room as it was', () => {
+    const before = pausedMidGame();
+    expect(before.players[0].score).toBeGreaterThan(0);
+    const state = run(before, { type: 'end-game', playerId: null }, 9000);
+
+    expect(state).toMatchObject({
+      phase: 'lobby',
+      pause: null,
+      rounds: [],
+      roundIndex: 0,
+      spares: [],
+      reprises: [],
+      finales: [],
+      code: before.code,
+      hostToken: before.hostToken,
+      lobbyUrl: before.lobbyUrl,
+      audioChecked: true,
+      createdAt: before.createdAt,
+    });
+    expect(state.version).toBe(before.version + 1);
+    expect(state.players.map((p) => [p.id, p.token, p.name, p.score])).toEqual([
+      ['p0', 't0', 'Ana', 0],
+      ['p1', 't1', 'Ben', 0],
+    ]);
+    // The three songs heard stay heard; the seven never played may come up again.
+    expect(state.playedSongIds).toEqual(SONGS.slice(0, 3).map((s) => s.id));
+
+    const host = viewFor(state, { role: 'host' }, 9000);
+    expect(host).toMatchObject({ phase: 'lobby', round: null, pause: null, audioChecked: true });
+    expect(host.finaleUrls).toBeUndefined();
+    expect(host.players.every((p) => !p.answered && !p.gaveUp && p.score === 0)).toBe(true);
+  });
+
+  it('keeps anything else the room holds, so later lobby settings survive', () => {
+    const before = { ...pausedMidGame(), somePreference: 'kept' } as RoomState;
+    const state = run(before, { type: 'end-game', playerId: null }, 9000);
+    expect((state as RoomState & { somePreference: string }).somePreference).toBe('kept');
+  });
+
+  it('can start a fresh game straight away, without checking the sound again', () => {
+    let state = run(pausedMidGame(), { type: 'end-game', playerId: 'p0' }, 9000);
+    const fresh = SONGS.map((s) => song(s.id + 500));
+    state = run(state, { type: 'start', songs: fresh, spares: SPARES }, 9100);
+    expect(state).toMatchObject({ phase: 'loading', roundIndex: 0, pause: null });
+    expect(state.rounds[0].song.id).toBe(501);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 9200);
+    state = run(state, { type: 'answer', playerId: 'p0', text: 'song 501' }, 9300);
+    expect(state.rounds[0].answers.p0.correct).toBe(true);
+    expect(state.playedSongIds).toEqual([1, 2, 3, ...fresh.map((s) => s.id)]);
+  });
+});
+
 // A game's worth of rounds, with the early rounds already answered.
 // `right` says, per round, who got it: knowledge of the artist.
 function heardRounds(right: string[][]): Round[] {

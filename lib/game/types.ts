@@ -95,6 +95,8 @@ export type Action =
   | { type: 'give-up'; playerId: string }
   | { type: 'next'; roundIndex: number }
   | { type: 'audio-check' }
+  /** Back to the lobby from a paused game. `playerId` is null from the host screen; a phone must be the leader's. */
+  | { type: 'end-game'; playerId: string | null }
   | { type: 'tick' };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };

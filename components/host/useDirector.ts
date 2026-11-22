@@ -82,11 +82,13 @@ export function useDirector(
   const paused = Boolean(view?.pause);
   const roundKey = roundIndex !== undefined && previewUrl ? `${roundIndex}:${previewUrl}` : '';
 
+  // A pause that ends in the lobby is a game the host ended: the held song
+  // stays stopped, so the lobby music rises from silence instead of out of it.
   useEffect(() => {
     if (!jukebox || !unlocked) return;
     if (paused) jukebox.hold();
-    else jukebox.release();
-  }, [jukebox, unlocked, paused]);
+    else jukebox.release(phase !== 'lobby');
+  }, [jukebox, unlocked, paused, phase]);
 
   // The song plays on through the answer, then fades out over the last few
   // seconds of the reveal, or before the preview runs out on its own if that
