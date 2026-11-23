@@ -1,0 +1,122 @@
+/* The changelog: each day is a paper card, like a strip filed in the jukebox,
+ * and each kind of change gets its own strip colour. */
+
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 4rem;
+}
+
+.top {
+  min-height: 4rem;
+}
+
+.mark {
+  font-size: 1.6rem;
+}
+
+.title {
+  margin-top: 1.5rem;
+  font-family: var(--font-display), cursive;
+  font-size: clamp(2.4rem, 8vw, 3.6rem);
+  font-weight: 400;
+  line-height: 1;
+}
+
+.lead {
+  margin: 1rem 0 2.5rem;
+  font-size: 1.1rem;
+  color: var(--chrome);
+  text-wrap: pretty;
+}
+
+.lead a {
+  color: var(--paper);
+  text-underline-offset: 0.2em;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.date {
+  margin-bottom: 0.6rem;
+  font-family: var(--font-strip), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--chrome);
+}
+
+.card {
+  border-radius: var(--radius-strip);
+  background: var(--paper);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+.section {
+  --kind: var(--paper-shade);
+  padding: 1rem 1.1rem 1.1rem;
+  border-left: 0.35rem solid var(--kind);
+}
+
+.section + .section {
+  border-top: 1px solid var(--paper-shade);
+}
+
+.section[data-kind='feature'] {
+  --kind: var(--cherry);
+}
+
+.section[data-kind='fix'] {
+  --kind: var(--seafoam);
+}
+
+.section[data-kind='nit'] {
+  --kind: var(--butter);
+}
+
+.kind {
+  font-family: var(--font-strip), sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.notes ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  /* Nested inside the day list, which would otherwise make these circles. */
+  list-style: disc;
+}
+
+.notes li {
+  line-height: 1.45;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.notes li::marker {
+  color: var(--ink-soft);
+}
+
+.notes strong {
+  font-weight: 600;
+}
+
+.notes a {
+  color: var(--cherry);
+  text-underline-offset: 0.15em;
+}

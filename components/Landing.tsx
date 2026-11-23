@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
 
@@ -92,6 +93,10 @@ export function Landing() {
             <p>Ten songs on this screen, no room needed. Beat your own score.</p>
           </div>
         </section>
+
+        <nav className={styles.more}>
+          <Link href="/changelog">What&apos;s new</Link>
+        </nav>
       </div>
     </main>
   );
