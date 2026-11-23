@@ -8,6 +8,8 @@
 
 <p align="center">
   <a href="https://bop-quiz.vercel.app"><b>Play it → bop-quiz.vercel.app</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://bop-quiz.vercel.app/changelog">what’s new</a>
 </p>
 
 Open it on the television. Everyone else scans the code on the screen and
@@ -196,6 +198,14 @@ Every phone carries a *Send feedback* link, and the reveal has a shortcut for
 report gets a public id like `FB-12` and a status, and anyone can read the
 queue at [/feedback](https://bop-quiz.vercel.app/feedback) to see
 what was fixed, what was declined, and why.
+
+## Changelog
+
+What players see change is written up at
+[/changelog](https://bop-quiz.vercel.app/changelog), newest first. It is one
+markdown file, `content/changelog.md`: add an entry in the same commit as any
+change a player would notice, and leave internal work out. `AGENTS.md` has
+the rules, and `npm test` checks the file's shape.
 
 ## Credits
 

@@ -86,6 +86,23 @@
   letter-spacing: 0.2em;
 }
 
+.more {
+  margin-top: 2.25rem;
+  font-size: 0.95rem;
+}
+
+.more a {
+  display: inline-block;
+  /* A comfortable thumb target without looking like a button. */
+  padding: 0.6rem 0;
+  color: var(--chrome);
+  text-underline-offset: 0.25em;
+}
+
+.more a:hover {
+  color: var(--paper);
+}
+
 @media (max-width: 720px) {
   .page {
     align-items: end;
