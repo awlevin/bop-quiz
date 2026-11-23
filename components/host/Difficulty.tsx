@@ -52,7 +52,7 @@ export function DifficultyPicker({ tone }: { tone: 'paper' | 'booth' }) {
           onClick={() => setCustomChosen(true)}
         >
           Custom
-          <small>Top {custom ? hitsDepth : '…'}</small>
+          <small>{custom ? `Top ${hitsDepth}` : 'Your pick'}</small>
         </button>
       </div>
 
