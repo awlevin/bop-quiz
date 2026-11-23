@@ -1,3 +1,4 @@
+import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { CLASSIC, depthFor } from './setlist';
 import type { RoomState, RoomView, RoundView } from './types';
 
@@ -48,6 +49,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     pause: state.pause ?? null,
     audioChecked: state.audioChecked !== false,
     setlist: { mode: setlist.mode },
+    giveUpNotice: state.giveUpNotice ?? DEFAULT_GIVE_UP_NOTICE,
     serverNow: now,
   };
 

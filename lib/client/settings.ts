@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { DEFAULT_GIVE_UP_NOTICE, type GiveUpNotice, isGiveUpNotice } from '@/lib/game/giveUpNotice';
 import {
   cleanDepth,
   cleanTaste,
@@ -22,6 +23,8 @@ export interface Settings {
   hostTaste: Taste;
   /** Difficulty mode: how many of each decade's top songs to draw from (10 Easy, 20 Medium, 30 Hard). */
   hitsDepth: number;
+  /** Where give-ups are announced: the TV and the other phones, or the TV alone. Copied into the room. */
+  giveUpNotice: GiveUpNotice;
 }
 
 const KEY = 'mm:settings';
@@ -30,6 +33,7 @@ const DEFAULTS: Settings = {
   setlistMode: 'classic',
   hostTaste: NO_TASTE,
   hitsDepth: DEFAULT_DEPTH,
+  giveUpNotice: DEFAULT_GIVE_UP_NOTICE,
 };
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
@@ -40,6 +44,7 @@ function sanitize(stored: Partial<Settings>): Settings {
     setlistMode: isSetlistMode(stored.setlistMode) ? stored.setlistMode : DEFAULTS.setlistMode,
     hostTaste: cleanTaste(stored.hostTaste) ?? DEFAULTS.hostTaste,
     hitsDepth: cleanDepth(stored.hitsDepth) ?? DEFAULTS.hitsDepth,
+    giveUpNotice: isGiveUpNotice(stored.giveUpNotice) ? stored.giveUpNotice : DEFAULTS.giveUpNotice,
   };
 }
 

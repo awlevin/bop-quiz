@@ -41,7 +41,9 @@ plays from where they are sitting. Nothing to install, no accounts.
    rounds, then the final scores with a song to see them out.
 
 Nobody knows it? Hit **Give up** to tap out of the round. A white flag drops
-onto the television.
+onto the television, and a slim "Ben gave up" banner slides across the top of
+everyone else's phone for a moment. To keep it to the television alone, turn
+off **Give-ups on every phone** in the host's settings menu.
 
 Need a break? Any phone can pause the game. From the pause screen the host,
 at the television or on the first player's phone, can also end the game: the

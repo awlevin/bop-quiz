@@ -4,6 +4,7 @@
 // never see it: they get a RoomView, built per recipient by `views.ts`, which
 // holds back the answer until the reveal.
 
+import type { GiveUpNotice } from './giveUpNotice';
 import type { Setlist, SetlistMode, Taste } from './setlist';
 
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
@@ -77,6 +78,8 @@ export interface RoomState {
   audioChecked?: boolean;
   /** Where the songs come from. Absent in rooms older than setlist modes: Classic. */
   setlist?: Setlist;
+  /** Where give-ups are announced. Absent in rooms older than the setting: everyone's phones. */
+  giveUpNotice?: GiveUpNotice;
   createdAt: number;
 }
 
@@ -99,7 +102,9 @@ export type Action =
   /** The host's setlist mode and picks, between games. */
   | { type: 'setlist'; mode: SetlistMode; taste: Taste; depth?: number }
   /** A player's picks for Crowd picks, between games. */
-  | { type: 'taste'; playerId: string; taste: Taste };
+  | { type: 'taste'; playerId: string; taste: Taste }
+  /** The host's choice of where give-ups are announced. Any time: it only changes who sees a banner. */
+  | { type: 'give-up-notice'; notice: GiveUpNotice };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
 
@@ -160,6 +165,8 @@ export interface RoomView {
     /** In Difficulty mode: how many of each decade's top songs the draw takes from. */
     depth?: number;
   };
+  /** Where give-ups are announced: phones show other players' only with 'everyone'. */
+  giveUpNotice: GiveUpNotice;
   /** Players only. */
   you?: {
     id: string;

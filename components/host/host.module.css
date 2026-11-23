@@ -89,6 +89,9 @@
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 1em 2.5em rgb(0 0 0 / 0.45);
+  /* A long menu (Difficulty open, say) scrolls rather than running off a short screen. */
+  max-height: calc(100dvh - 8em);
+  overflow-y: auto;
 }
 
 .settingsPanel h2 {

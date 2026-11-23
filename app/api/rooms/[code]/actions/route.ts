@@ -1,5 +1,6 @@
 import { pickSongs } from '@/lib/catalog';
 import { ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
+import { isGiveUpNotice } from '@/lib/game/giveUpNotice';
 import { cleanDepth, cleanTaste, depthFor, isSetlistMode, tastesFor } from '@/lib/game/setlist';
 import type { Action } from '@/lib/game/types';
 import { dispatch, identify, newPlayerId, newToken, normalizeCode } from '@/lib/realtime/rooms';
@@ -19,6 +20,7 @@ interface Body {
   mode?: unknown;
   taste?: unknown;
   depth?: unknown;
+  notice?: unknown;
 }
 
 export async function POST(
@@ -57,6 +59,7 @@ export async function POST(
   // Optional, for screens from before Difficulty mode; present, it must be a number.
   const depth = body.depth === undefined ? undefined : cleanDepth(body.depth);
   if (body.type === 'setlist' && depth === null) return refuse(400, 'That is not a difficulty.');
+  if (body.type === 'give-up-notice' && !isGiveUpNotice(body.notice)) return refuse(400, 'There is no such option.');
 
   if (body.type === 'tick') action = { type: 'tick' };
   if (body.type === 'next') action = { type: 'next', roundIndex };
@@ -107,6 +110,9 @@ export async function POST(
     }
     if (body.type === 'setlist' && isSetlistMode(body.mode) && taste) {
       action = { type: 'setlist', mode: body.mode, taste, ...(depth != null && { depth }) };
+    }
+    if (body.type === 'give-up-notice' && isGiveUpNotice(body.notice)) {
+      action = { type: 'give-up-notice', notice: body.notice };
     }
   } else {
     const { playerId } = viewer;

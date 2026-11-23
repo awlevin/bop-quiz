@@ -30,6 +30,7 @@ import type { QuestionKind, RevealedAnswer, RoomView } from '@/lib/game/types';
 
 import { AudioCheck, reopenAudioCheck } from './AudioCheck';
 import { Confetti } from './Confetti';
+import { GiveUpNoticeSetting, useGiveUpNoticeSync } from './GiveUpNotice';
 import { Halo } from './Halo';
 import styles from './host.module.css';
 import { QrCode } from './JoinCode';
@@ -64,6 +65,7 @@ export function HostScreen({ code }: { code: string }) {
   );
   const director = useDirector(view, clockOffset, settings.lobbyMusic, report);
   useSetlistSync(view, token ?? null);
+  useGiveUpNoticeSync(view, token ?? null);
 
   // Remember every song this screen reveals, so later rooms skip it.
   const revealedSongId = view?.round?.song?.id;
@@ -305,6 +307,7 @@ function SettingsMenu({
             checked={settings.lobbyMusic}
             onChange={(lobbyMusic) => updateSettings({ lobbyMusic })}
           />
+          <GiveUpNoticeSetting />
           {soundCheck && (
             <button
               type="button"

@@ -16,6 +16,7 @@ import { KINDS } from '@/lib/game/kinds';
 import { rankPlayers } from '@/lib/game/rank';
 import type { RoomView } from '@/lib/game/types';
 
+import { GiveUpBanner } from './GiveUpBanner';
 import styles from './play.module.css';
 import { TastePicker } from './TastePicker';
 
@@ -251,6 +252,7 @@ function Room({
       {view.phase === 'reveal' && <RevealView view={view} token={token} clockOffset={clockOffset} />}
       {view.phase === 'finished' && <FinishedView view={view} token={token} />}
       {status === 'reconnecting' && <div className={styles.toast}>Reconnecting…</div>}
+      <GiveUpBanner view={view} />
     </Shell>
   );
 }

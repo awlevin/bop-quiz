@@ -15,6 +15,7 @@ import {
   REVEAL_MS,
   ROUND_KINDS,
 } from './config';
+import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { grade } from './score';
 import { CLASSIC } from './setlist';
 import type { Action, ReduceResult, RoomState, Round, Song } from './types';
@@ -331,6 +332,12 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       if (!state.players.some((p) => p.id === action.playerId)) return fail('You are not in this room.');
       const picks = { ...setlist.picks, [action.playerId]: action.taste };
       return { ok: true, state: { ...state, setlist: { ...setlist, picks } } };
+    }
+
+    case 'give-up-notice': {
+      // Unchanged is a no-op, so the host screen re-sending it redraws nobody.
+      if ((state.giveUpNotice ?? DEFAULT_GIVE_UP_NOTICE) === action.notice) return { ok: true, state };
+      return { ok: true, state: { ...state, giveUpNotice: action.notice } };
     }
 
     case 'tick':
