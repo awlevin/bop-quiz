@@ -31,7 +31,7 @@ plays from where they are sitting. Nothing to install, no accounts.
 3. **Fifteen seconds of a song play.** The record spins, the timer ring runs
    down, and every phone asks one question. The first three rounds want the
    **title**, then three want the **artist**, two want the **year**, and the
-   last two want the **album**.
+   last two want the **album**. The host can change that mix; see below.
 4. **Type it and lock it in.** A right answer is worth 1000 points at the
    first second and 500 at the buzzer, so speed is most of the game. Matching
    is forgiving: typos, a missing apostrophe, a dropped "The" and the
@@ -76,6 +76,16 @@ since the '60s: the top 10 of each on **Easy**, 20 on **Medium**, 30 on
 the next-best-known songs rather than repeats.
 [/shuffle](https://bop-quiz.vercel.app/shuffle) previews each mode with a few
 made-up picks.
+
+### Changing the rounds (experimental)
+
+Next to it, **Rounds** sets how many songs ask for the title, the artist,
+the year and the album, up to ten of each, still easiest first, and how many
+times each song plays. Played twice, a round's fifteen seconds run, dip, and
+start over from the same spot, and the answer stays open for all thirty: the
+points fall across the whole window, so waiting for the replay costs you. The
+lobby says so when a game is not the usual ten songs heard once. It works with
+every setlist mode, and quick play keeps the usual ten.
 
 <p align="center">
   <img src="assets/screenshots/tv-guessing.png" alt="The television during a round: a spinning record, a countdown, and who has locked in" width="900">

@@ -7,6 +7,7 @@ import catalog from '@/data/catalog.json';
 import finales from '@/data/finales.json';
 import lobby from '@/data/lobby.json';
 import { benchedSongIds } from '@/lib/feedback/store';
+import { ROUNDS_PER_GAME } from '@/lib/game/config';
 import type { GenreFamily, Taste } from '@/lib/game/setlist';
 import type { Song } from '@/lib/game/types';
 
@@ -25,7 +26,8 @@ const FINALES = finales as Song[];
  * first. `excludeIds` is oldest first.
  *
  * With `tastes` (Crowd picks or Host picks), the unheard songs are drawn for
- * those tastes, closest first (`drawForTastes`); without, at random.
+ * those tastes, closest first (`drawForTastes`); without, at random. The
+ * first `rounds` songs are the game's, the rest its spares.
  */
 export function chooseSongs(
   count: number,
@@ -33,6 +35,7 @@ export function chooseSongs(
   random: () => number = Math.random,
   songs: readonly Song[] = SONGS,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
 ): Song[] {
   const exclude = new Set(excludeIds);
   const fresh = shuffle(
@@ -44,7 +47,7 @@ export function chooseSongs(
     .filter((s) => exclude.has(s.id))
     .sort((a, b) => lastHeard.get(a.id)! - lastHeard.get(b.id)!);
 
-  const picked = tastes.length ? drawForTastes(tastes, count, fresh, random, songs) : [];
+  const picked = tastes.length ? drawForTastes(tastes, count, fresh, random, songs, rounds) : [];
   const taken = new Set(picked.map((s) => s.id));
   const artists = new Set(picked.map((s) => primaryArtist(s.artist)));
   const leftovers: Song[] = [];
@@ -75,6 +78,7 @@ export async function drawSongs(
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
   depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
   // Songs someone has reported sit out until the report is closed.
@@ -83,7 +87,7 @@ export async function drawSongs(
   const hits = depth === null ? playable : hitsPool(playable, depth, excludeIds, count);
   // A pool too small for a game at all (no rankings) falls back to everything.
   const pool = hits.length >= count ? hits : playable;
-  const songs = chooseSongs(count, excludeIds, Math.random, pool, tastes);
+  const songs = chooseSongs(count, excludeIds, Math.random, pool, tastes, rounds);
   return { songs, finales: chooseFinales(songs, lastFinaleId) };
 }
 
@@ -93,9 +97,10 @@ export async function pickSongs(
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
   depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
-  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes, depth);
+  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes, rounds, depth);
   const fresh = await refreshPreviews([...songs, ...finales]);
   return { songs: fresh.slice(0, songs.length), finales: fresh.slice(songs.length) };
 }

@@ -1,4 +1,4 @@
-import { ANSWER_GRACE_MS, GUESS_MS, REVEAL_MS } from './config';
+import { ANSWER_GRACE_MS, REVEAL_MS } from './config';
 import type { Phase, RoundView } from './types';
 
 /**
@@ -9,7 +9,7 @@ export function phaseDeadline(view: { phase: Phase; round: RoundView | null }): 
   const round = view.round;
   if (!round) return null;
   if (view.phase === 'guessing' && round.guessStartedAt !== null) {
-    return round.guessStartedAt + GUESS_MS + ANSWER_GRACE_MS;
+    return round.guessStartedAt + round.guessMs + ANSWER_GRACE_MS;
   }
   if (view.phase === 'reveal' && round.revealStartedAt !== null) {
     return round.revealStartedAt + REVEAL_MS;

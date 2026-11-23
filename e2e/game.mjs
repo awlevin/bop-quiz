@@ -1,5 +1,6 @@
 // End-to-end run of a whole game in real browsers: one host, N phones.
 //   node e2e/game.mjs            (expects the app on BASE_URL, default :3210)
+//   PLAYS=2 ROUNDS=2 node e2e/game.mjs   (each song plays twice; a short run)
 // Screenshots land in e2e/shots/.
 
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -10,6 +11,8 @@ import { fakeAudio } from './fake-audio.mjs';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3210';
 const ROUNDS = Number(process.env.ROUNDS ?? 10);
+const PLAYS = Number(process.env.PLAYS ?? 1);
+const WINDOW_MS = PLAYS * 15000;
 const NAMES = ['Ana', 'Benedict', 'Chidi'];
 const SHOTS = new URL('./shots/', import.meta.url).pathname;
 mkdirSync(SHOTS, { recursive: true });
@@ -42,6 +45,16 @@ host.on('request', (r) => {
   const file = r.url().split('/').pop();
   const song = catalog.find((s) => s.previewUrl.split('/').pop() === file);
   if (song && !requested.includes(song)) requested.push(song);
+});
+// The jukebox's players never join the page, so keep a note of every one that plays.
+await host.addInitScript(() => {
+  const media = new Set();
+  window.__media = media;
+  const play = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () {
+    media.add(this);
+    return play.call(this);
+  };
 });
 await fakeAudio(host);
 await host.goto(BASE);
@@ -78,6 +91,18 @@ const silent = async () => {
     if (count) problems.push(`${name}: has ${count} media elements`);
   }
 };
+
+// The rounds setting: a change shows in the lobby, and Reset puts it back.
+await host.getByRole('button', { name: 'Settings' }).click();
+await host.getByRole('button', { name: 'More: Song title' }).click();
+const custom = host.getByText('11 songs · 4 title, 3 artist, 2 year, 2 album');
+await custom.waitFor();
+await host.screenshot({ path: `${SHOTS}03-host-settings-rounds.png` });
+await host.getByRole('button', { name: 'Reset' }).click();
+await custom.waitFor({ state: 'detached' });
+for (let i = 1; i < PLAYS; i++) await host.getByRole('button', { name: 'More: Plays per song' }).click();
+if (PLAYS > 1) await host.getByText(/each plays (twice|three times)/).waitFor();
+await host.keyboard.press('Escape');
 
 // Nobody starts until the TV has played its test sound and someone heard it.
 const anaStart = phones[0].page.getByRole('button', { name: 'Start game' });
@@ -153,8 +178,19 @@ for (let round = 0; round < ROUNDS; round++) {
     await host.screenshot({ path: `${SHOTS}10-host-locked.png` });
   }
 
+  if (round === 0 && PLAYS > 1) {
+    // Chidi holds out, so the round runs on and the clip comes round again from the top.
+    await host.getByText(`Play 2 of ${PLAYS}`).waitFor({ timeout: 20000 });
+    await host.waitForTimeout(2000);
+    const at = await host.evaluate(() =>
+      [...window.__media].filter((m) => !m.paused && !m.loop && !m.src.startsWith('blob:')).map((m) => m.currentTime),
+    );
+    if (!at.length || at[0] > 6) problems.push(`the second play did not start over: at ${at.join(', ')} s`);
+    await host.screenshot({ path: `${SHOTS}07-host-second-play.png` });
+  }
+
   const started = Date.now();
-  await host.getByText('This round').waitFor({ timeout: 25000 });
+  await host.getByText('This round').waitFor({ timeout: WINDOW_MS + 10000 });
   const waited = Date.now() - started;
   if (round === 1 && waited > 3000) problems.push(`round 2: reveal took ${waited} ms after all answered`);
   console.log(`round ${round + 1}: reveal after ${waited} ms`);

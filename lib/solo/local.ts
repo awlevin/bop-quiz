@@ -34,8 +34,10 @@ export function createSoloRoom(now: number, heard: readonly number[] = []): Room
   return result.state;
 }
 
-/** The most one game can pay: every song right at the first second. */
-export const PERFECT_SCORE = MAX_POINTS * ROUNDS_PER_GAME;
+/** The most a game of `rounds` songs can pay: every song right at the first second. */
+export function perfectScore(rounds: number = ROUNDS_PER_GAME): number {
+  return MAX_POINTS * rounds;
+}
 
 export interface Tier {
   /** "Jukebox hero" */
@@ -54,9 +56,9 @@ const TIERS: [number, Tier][] = [
   [0, { title: 'More of a podcast person', line: 'The songs will still be here tomorrow.' }],
 ];
 
-/** What a score out of a full game makes you. */
-export function tierFor(score: number): Tier {
-  const share = score / PERFECT_SCORE;
+/** What a score out of a game of `rounds` songs makes you. */
+export function tierFor(score: number, rounds: number = ROUNDS_PER_GAME): Tier {
+  const share = score / perfectScore(Math.max(rounds, 1));
   return TIERS.find(([floor]) => share >= floor)![1];
 }
 

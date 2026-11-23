@@ -172,6 +172,21 @@ describe('drawing for tastes', () => {
     expect(drawn.slice(3).map((s) => s.id)).toEqual([tiny[3].id, tiny[4].id]);
   });
 
+  it('shuffles however many rounds the game has, and keeps the spares after them', () => {
+    const tastes: Taste[] = [
+      { genres: ['rock'], decades: [1980] },
+      { genres: ['pop'], decades: [2010] },
+    ];
+    const ids = (songs: Song[]) => songs.map((s) => s.id);
+    for (const rounds of [4, ROUNDS_PER_GAME, 20]) {
+      // With no rounds to shuffle, the draw comes back in the order it was drawn.
+      const order = chooseSongs(rounds + SPARE_SONGS, [], seeded(3), SONGS, tastes, 0);
+      const game = chooseSongs(rounds + SPARE_SONGS, [], seeded(3), SONGS, tastes, rounds);
+      expect(ids(game.slice(rounds))).toEqual(ids(order.slice(rounds)));
+      expect(ids(game.slice(0, rounds)).sort()).toEqual(ids(order.slice(0, rounds)).sort());
+    }
+  });
+
   it('leaves benched songs out: it only draws from the songs it is given', () => {
     const taste: Taste = { genres: ['rnb'], decades: [1960] };
     const benched = new Set(SONGS.filter((s) => matches(taste, s)).slice(0, 3).map((s) => s.id));

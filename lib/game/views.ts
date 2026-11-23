@@ -1,3 +1,4 @@
+import { DEFAULT_FORMAT, roundGuessMs } from './format';
 import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { CLASSIC, depthFor } from './setlist';
 import type { RoomState, RoomView, RoundView } from './types';
@@ -17,6 +18,9 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       total: state.rounds.length,
       kind: round.kind,
       kindChanged: state.rounds[state.roundIndex - 1]?.kind !== round.kind,
+      kinds: state.rounds.map((r) => r.kind),
+      guessMs: roundGuessMs(round),
+      plays: round.plays ?? 1,
       guessStartedAt: round.guessStartedAt,
       revealStartedAt: round.revealStartedAt,
     };
@@ -50,6 +54,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     audioChecked: state.audioChecked !== false,
     setlist: { mode: setlist.mode },
     giveUpNotice: state.giveUpNotice ?? DEFAULT_GIVE_UP_NOTICE,
+    format: state.format ?? DEFAULT_FORMAT,
     serverNow: now,
   };
 

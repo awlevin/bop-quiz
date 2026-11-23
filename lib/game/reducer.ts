@@ -6,15 +6,8 @@
 // passed; the first one moves the room on, the rest are no-ops. That is what
 // lets the server be a set of stateless functions.
 
-import {
-  ANSWER_GRACE_MS,
-  GUESS_MS,
-  MAX_ANSWER_LENGTH,
-  MAX_NAME_LENGTH,
-  MAX_PLAYERS,
-  REVEAL_MS,
-  ROUND_KINDS,
-} from './config';
+import { ANSWER_GRACE_MS, MAX_ANSWER_LENGTH, MAX_NAME_LENGTH, MAX_PLAYERS, REVEAL_MS } from './config';
+import { DEFAULT_FORMAT, type GameFormat, roundGuessMs, roundKinds } from './format';
 import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { grade } from './score';
 import { CLASSIC } from './setlist';
@@ -41,6 +34,7 @@ export function createRoom(
     playedSongIds: [],
     audioChecked: false,
     setlist: CLASSIC,
+    format: DEFAULT_FORMAT,
     createdAt: now,
   };
 }
@@ -101,13 +95,14 @@ function backToLobby(state: RoomState): RoomState {
 export function settle(state: RoomState, now: number): RoomState {
   const round = currentRound(state);
   if (!round || state.pause) return state;
+  const guessMs = roundGuessMs(round);
   if (
     state.phase === 'guessing' &&
     round.guessStartedAt !== null &&
-    now >= round.guessStartedAt + GUESS_MS + ANSWER_GRACE_MS
+    now >= round.guessStartedAt + guessMs + ANSWER_GRACE_MS
   ) {
     // Stamp the reveal at the deadline itself, so a late tick cannot stretch it.
-    return settle(startReveal(state, round.guessStartedAt + GUESS_MS), now);
+    return settle(startReveal(state, round.guessStartedAt + guessMs), now);
   }
   if (
     state.phase === 'reveal' &&
@@ -119,13 +114,15 @@ export function settle(state: RoomState, now: number): RoomState {
   return state;
 }
 
-function newRounds(songs: Song[]): Round[] {
-  return ROUND_KINDS.map((kind, i) => ({
+// Each round carries its own window, so nothing about the room can change a game once it is running.
+function newRounds(format: GameFormat, songs: Song[]): Round[] {
+  return roundKinds(format).map((kind, i) => ({
     kind,
     song: songs[i],
     guessStartedAt: null,
     revealStartedAt: null,
     answers: {},
+    plays: format.plays,
   }));
 }
 
@@ -185,19 +182,23 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       if (state.players.length === 0) return fail('Wait for a player to join first.');
       // `false`, not falsy: a room from before the sound check starts as it always did.
       if (state.audioChecked === false) return fail('Check the sound on the big screen first.');
-      if (action.songs.length < ROUND_KINDS.length) return fail('Not enough songs to start.');
+      const format = state.format ?? DEFAULT_FORMAT;
+      const rounds = newRounds(format, action.songs);
+      if (action.songs.length < rounds.length) return fail('Not enough songs to start.');
+      // Only the songs that become rounds count as heard.
+      const songs = action.songs.slice(0, rounds.length);
       return {
         ok: true,
         state: {
           ...state,
           phase: 'loading',
           roundIndex: 0,
-          rounds: newRounds(action.songs),
+          rounds,
           spares: action.spares,
           finales: action.finales ?? [],
           pause: null,
           players: state.players.map((p) => ({ ...p, score: 0 })),
-          playedSongIds: [...state.playedSongIds, ...action.songs.map((s) => s.id)],
+          playedSongIds: [...state.playedSongIds, ...songs.map((s) => s.id)],
         },
       };
     }
@@ -267,8 +268,9 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       const text = action.text.trim().slice(0, MAX_ANSWER_LENGTH);
       if (!text) return fail('Type an answer first.');
 
-      const elapsedMs = Math.min(Math.max(now - round.guessStartedAt, 0), GUESS_MS);
-      const answer = grade(round.kind, round.song, text, elapsedMs);
+      const guessMs = roundGuessMs(round);
+      const elapsedMs = Math.min(Math.max(now - round.guessStartedAt, 0), guessMs);
+      const answer = grade(round.kind, round.song, text, elapsedMs, guessMs);
       const next = withRound(state, {
         ...round,
         answers: { ...round.answers, [action.playerId]: answer },
@@ -284,7 +286,7 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       }
       if (!state.players.some((p) => p.id === action.playerId)) return fail('You are not in this room.');
       if (round.answers[action.playerId]) return fail('You already locked in an answer.');
-      const elapsedMs = Math.min(Math.max(now - round.guessStartedAt, 0), GUESS_MS);
+      const elapsedMs = Math.min(Math.max(now - round.guessStartedAt, 0), roundGuessMs(round));
       const next = withRound(state, {
         ...round,
         answers: {
@@ -338,6 +340,12 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       // Unchanged is a no-op, so the host screen re-sending it redraws nobody.
       if ((state.giveUpNotice ?? DEFAULT_GIVE_UP_NOTICE) === action.notice) return { ok: true, state };
       return { ok: true, state: { ...state, giveUpNotice: action.notice } };
+    }
+
+    case 'format': {
+      // The rounds are laid out at Start, so the format changes only between games.
+      if (state.phase !== 'lobby' && state.phase !== 'finished') return fail('The game is already running.');
+      return { ok: true, state: { ...state, format: action.format } };
     }
 
     case 'tick':

@@ -64,6 +64,13 @@ export function layOut(
 export async function drawGame(mode: SetlistMode = 'classic'): Promise<GameDraw> {
   const tastes = SAMPLE_PICKS[mode].map((p) => p.taste);
   const depth = mode === 'hits' ? SAMPLE_DEPTH : null;
-  const { songs, finales } = await drawSongs(ROUNDS_PER_GAME + SPARE_SONGS, [], undefined, tastes, depth);
+  const { songs, finales } = await drawSongs(
+    ROUNDS_PER_GAME + SPARE_SONGS,
+    [],
+    undefined,
+    tastes,
+    ROUNDS_PER_GAME,
+    depth,
+  );
   return layOut(songs, finales, Date.now(), mode);
 }
