@@ -1,4 +1,4 @@
-import { CLASSIC } from './setlist';
+import { CLASSIC, depthFor } from './setlist';
 import type { RoomState, RoomView, RoundView } from './types';
 
 export type Viewer = { role: 'host' } | { role: 'player'; playerId: string };
@@ -50,6 +50,9 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     setlist: { mode: setlist.mode },
     serverNow: now,
   };
+
+  const depth = depthFor(setlist);
+  if (depth !== null) view.setlist.depth = depth;
 
   if (viewer.role === 'host') {
     view.setlist.host = setlist.host;

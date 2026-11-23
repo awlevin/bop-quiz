@@ -2,7 +2,15 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { cleanTaste, isSetlistMode, NO_TASTE, type SetlistMode, type Taste } from '@/lib/game/setlist';
+import {
+  cleanDepth,
+  cleanTaste,
+  DEFAULT_DEPTH,
+  isSetlistMode,
+  NO_TASTE,
+  type SetlistMode,
+  type Taste,
+} from '@/lib/game/setlist';
 
 // Host-screen preferences, kept in this browser.
 
@@ -12,10 +20,17 @@ export interface Settings {
   setlistMode: SetlistMode;
   /** What this screen picks in Host picks mode. */
   hostTaste: Taste;
+  /** Difficulty mode: how many of each decade's top songs to draw from (10 Easy, 20 Medium, 30 Hard). */
+  hitsDepth: number;
 }
 
 const KEY = 'mm:settings';
-const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE };
+const DEFAULTS: Settings = {
+  lobbyMusic: true,
+  setlistMode: 'classic',
+  hostTaste: NO_TASTE,
+  hitsDepth: DEFAULT_DEPTH,
+};
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
 function sanitize(stored: Partial<Settings>): Settings {
@@ -24,6 +39,7 @@ function sanitize(stored: Partial<Settings>): Settings {
     ...stored,
     setlistMode: isSetlistMode(stored.setlistMode) ? stored.setlistMode : DEFAULTS.setlistMode,
     hostTaste: cleanTaste(stored.hostTaste) ?? DEFAULTS.hostTaste,
+    hitsDepth: cleanDepth(stored.hitsDepth) ?? DEFAULTS.hitsDepth,
   };
 }
 

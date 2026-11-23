@@ -67,8 +67,13 @@ asked for come up more often, and each person gets their share, so the lone
 soul fan is not drowned out by a room of pop fans. In *Host picks* the
 television picks for everyone. A pick too narrow for a whole game is filled
 with the closest songs: the same genre a decade out, then the same decade in
-another genre. [/shuffle](https://bop-quiz.vercel.app/shuffle) previews each
-mode with a few made-up picks.
+another genre. *Difficulty* draws from the best-known songs of every decade
+since the '60s: the top 10 of each on **Easy**, 20 on **Medium**, 30 on
+**Hard**, or any number the host types under *Custom*. The ranking is
+`data/decade-ranks.json`. A room that has heard every song in its pool gets
+the next-best-known songs rather than repeats.
+[/shuffle](https://bop-quiz.vercel.app/shuffle) previews each mode with a few
+made-up picks.
 
 <p align="center">
   <img src="assets/screenshots/tv-guessing.png" alt="The television during a round: a spinning record, a countdown, and who has locked in" width="900">

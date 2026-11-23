@@ -4,7 +4,11 @@ import { ROUNDS_PER_GAME } from './config';
 import { createRoom, reduce } from './reducer';
 import {
   CLASSIC,
+  cleanDepth,
   cleanTaste,
+  DEFAULT_DEPTH,
+  depthFor,
+  difficultyOf,
   combineTastes,
   familyOfGenre,
   NO_TASTE,
@@ -138,6 +142,46 @@ describe('setlist actions', () => {
       host: POP,
       picks: {},
     });
+  });
+});
+
+describe('Difficulty mode', () => {
+  it('reads a depth from untrusted input, whole and in range', () => {
+    expect(cleanDepth(20)).toBe(20);
+    expect(cleanDepth('25')).toBe(25);
+    expect(cleanDepth(12.6)).toBe(13);
+    expect(cleanDepth(0)).toBe(1);
+    expect(cleanDepth(500)).toBe(50);
+    expect(cleanDepth('')).toBeNull();
+    expect(cleanDepth('hard')).toBeNull();
+    expect(cleanDepth(null)).toBeNull();
+    expect(cleanDepth(Number.NaN)).toBeNull();
+  });
+
+  it('names the presets: 10 Easy, 20 Medium, 30 Hard, anything else custom', () => {
+    expect(difficultyOf(10)).toBe('easy');
+    expect(difficultyOf(20)).toBe('medium');
+    expect(difficultyOf(30)).toBe('hard');
+    expect(difficultyOf(15)).toBeNull();
+  });
+
+  it('draws deep only in Difficulty mode, Easy unless told otherwise', () => {
+    expect(depthFor({ ...CLASSIC, depth: 30 })).toBeNull();
+    expect(depthFor({ ...CLASSIC, mode: 'hits' })).toBe(DEFAULT_DEPTH);
+    expect(depthFor({ ...CLASSIC, mode: 'hits', depth: 30 })).toBe(30);
+    expect(depthFor(undefined)).toBeNull();
+  });
+
+  it('keeps the host’s depth in the room and shows it to every screen', () => {
+    let state = run(lobby(['Ana']), { type: 'setlist', mode: 'hits', taste: NO_TASTE, depth: 30 });
+    expect(state.setlist).toEqual({ mode: 'hits', host: NO_TASTE, picks: {}, depth: 30 });
+    expect(viewFor(state, { role: 'player', playerId: 'p0' }, 0).setlist).toEqual({ mode: 'hits', depth: 30 });
+    // A screen from before Difficulty sends no depth; the room keeps the one it has.
+    state = run(state, { type: 'setlist', mode: 'hits', taste: NO_TASTE });
+    expect(state.setlist!.depth).toBe(30);
+    // Other modes keep it for later but do not show it.
+    state = run(state, { type: 'setlist', mode: 'classic', taste: NO_TASTE });
+    expect(viewFor(state, { role: 'host' }, 0).setlist.depth).toBeUndefined();
   });
 });
 

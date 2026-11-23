@@ -320,6 +320,7 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       // Picks shape the next draw, so they change only between games.
       if (state.phase !== 'lobby' && state.phase !== 'finished') return fail('The game is already running.');
       const setlist = { ...(state.setlist ?? CLASSIC), mode: action.mode, host: action.taste };
+      if (action.depth !== undefined) setlist.depth = action.depth;
       return { ok: true, state: { ...state, setlist } };
     }
 

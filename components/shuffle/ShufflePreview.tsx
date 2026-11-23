@@ -137,7 +137,8 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
       <p className={styles.lead}>
         Each draw is what pressing Start would have queued for a fresh room: ten questions, three
         spares, and the finale. No artist twice, and any song with an open report sits out. The
-        Crowd picks and Host picks setlists draw for a few made-up picks.
+        Crowd picks and Host picks setlists draw for a few made-up picks, and Difficulty draws on
+        Easy: the top ten songs of each decade.
       </p>
 
       <div className={styles.controls}>

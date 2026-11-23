@@ -97,7 +97,7 @@ export type Action =
   | { type: 'end-game'; playerId: string | null }
   | { type: 'tick' }
   /** The host's setlist mode and picks, between games. */
-  | { type: 'setlist'; mode: SetlistMode; taste: Taste }
+  | { type: 'setlist'; mode: SetlistMode; taste: Taste; depth?: number }
   /** A player's picks for Crowd picks, between games. */
   | { type: 'taste'; playerId: string; taste: Taste };
 
@@ -157,6 +157,8 @@ export interface RoomView {
     host?: Taste;
     /** Host only, in Crowd picks: what each player still in the room has picked, by id. */
     picks?: Record<string, Taste>;
+    /** In Difficulty mode: how many of each decade's top songs the draw takes from. */
+    depth?: number;
   };
   /** Players only. */
   you?: {

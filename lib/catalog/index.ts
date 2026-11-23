@@ -10,6 +10,7 @@ import { benchedSongIds } from '@/lib/feedback/store';
 import type { GenreFamily, Taste } from '@/lib/game/setlist';
 import type { Song } from '@/lib/game/types';
 
+import { hitsPool } from './hits';
 import { refreshPreviews } from './itunes';
 import { drawForTastes, familyResolver } from './setlist';
 import { primaryArtist, shuffle } from './util';
@@ -65,17 +66,24 @@ export function chooseSongs(
  * Songs for one game and the finale, exactly as a room draws them, but with
  * the preview URLs still as stored. The shuffle preview page uses this to
  * show what a game would have played without a trip to iTunes.
+ *
+ * With `depth` (Difficulty mode), only the top `depth` songs of each decade
+ * are drawn from (`hitsPool`).
  */
 export async function drawSongs(
   count: number,
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
   // Songs someone has reported sit out until the report is closed.
   const benched = new Set(await benchedSongIds().catch(() => []));
   const playable = SONGS.filter((s) => !benched.has(s.id));
-  const songs = chooseSongs(count, excludeIds, Math.random, playable, tastes);
+  const hits = depth === null ? playable : hitsPool(playable, depth, excludeIds, count);
+  // A pool too small for a game at all (no rankings) falls back to everything.
+  const pool = hits.length >= count ? hits : playable;
+  const songs = chooseSongs(count, excludeIds, Math.random, pool, tastes);
   return { songs, finales: chooseFinales(songs, lastFinaleId) };
 }
 
@@ -85,8 +93,9 @@ export async function pickSongs(
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
-  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes);
+  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes, depth);
   const fresh = await refreshPreviews([...songs, ...finales]);
   return { songs: fresh.slice(0, songs.length), finales: fresh.slice(songs.length) };
 }

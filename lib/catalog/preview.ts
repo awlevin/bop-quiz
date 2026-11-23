@@ -3,7 +3,7 @@
 // what pressing Start would have produced.
 
 import { ROUND_KINDS, ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
-import type { GenreFamily, SetlistMode, Taste } from '@/lib/game/setlist';
+import { DEFAULT_DEPTH, type GenreFamily, type SetlistMode, type Taste } from '@/lib/game/setlist';
 import type { QuestionKind, Song } from '@/lib/game/types';
 
 import { drawSongs, songFamily } from './index';
@@ -22,7 +22,11 @@ export const SAMPLE_PICKS: Record<SetlistMode, { who: string; taste: Taste }[]> 
     { who: 'Cy', taste: { genres: ['rnb'], decades: [1960, 1970] } },
   ],
   host: [{ who: 'The host', taste: { genres: ['hiphop'], decades: [1990, 2000] } }],
+  hits: [],
 };
+
+/** The depth the page draws Difficulty mode at: Easy. */
+export const SAMPLE_DEPTH = DEFAULT_DEPTH;
 
 export interface GameDraw {
   /** In playing order, each with the question it would have asked. */
@@ -59,6 +63,7 @@ export function layOut(
 /** A fresh room's first game: nothing heard yet, no finale to avoid. */
 export async function drawGame(mode: SetlistMode = 'classic'): Promise<GameDraw> {
   const tastes = SAMPLE_PICKS[mode].map((p) => p.taste);
-  const { songs, finales } = await drawSongs(ROUNDS_PER_GAME + SPARE_SONGS, [], undefined, tastes);
+  const depth = mode === 'hits' ? SAMPLE_DEPTH : null;
+  const { songs, finales } = await drawSongs(ROUNDS_PER_GAME + SPARE_SONGS, [], undefined, tastes, depth);
   return layOut(songs, finales, Date.now(), mode);
 }
