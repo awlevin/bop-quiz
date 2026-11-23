@@ -28,6 +28,8 @@ export interface Settings {
   giveUpNotice: GiveUpNotice;
   /** Experimental: rounds of each kind and plays per song. Copied into the room like the setlist. */
   format: GameFormat;
+  /** House rule: a fold can back another player. The host screen copies it into the room. */
+  rideAlong: boolean;
 }
 
 const KEY = 'mm:settings';
@@ -38,6 +40,7 @@ const DEFAULTS: Settings = {
   hitsDepth: DEFAULT_DEPTH,
   giveUpNotice: DEFAULT_GIVE_UP_NOTICE,
   format: DEFAULT_FORMAT,
+  rideAlong: false,
 };
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
@@ -50,6 +53,7 @@ function sanitize(stored: Partial<Settings>): Settings {
     hitsDepth: cleanDepth(stored.hitsDepth) ?? DEFAULTS.hitsDepth,
     giveUpNotice: isGiveUpNotice(stored.giveUpNotice) ? stored.giveUpNotice : DEFAULTS.giveUpNotice,
     format: cleanFormat(stored.format) ?? DEFAULTS.format,
+    rideAlong: stored.rideAlong === true,
   };
 }
 

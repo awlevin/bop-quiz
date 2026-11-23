@@ -11,10 +11,18 @@ import { lastName, seats } from '@/lib/client/storage';
 import { useLinerNote } from '@/lib/client/useLinerNote';
 import { useServerNow } from '@/lib/client/useNow';
 import { useRoom } from '@/lib/client/useRoom';
-import { MAX_ANSWER_LENGTH, MAX_NAME_LENGTH, REVEAL_MS } from '@/lib/game/config';
+import {
+  HECKLE_COOLDOWN_MS,
+  MAX_ANSWER_LENGTH,
+  MAX_NAME_LENGTH,
+  REVEAL_MS,
+  RIDE_SHARE,
+  STUMPER_POINTS,
+} from '@/lib/game/config';
+import { HECKLES } from '@/lib/game/heckles';
 import { KINDS } from '@/lib/game/kinds';
 import { rankPlayers } from '@/lib/game/rank';
-import type { RoomView } from '@/lib/game/types';
+import type { HeckleKind, RoomView } from '@/lib/game/types';
 
 import { GiveUpBanner } from './GiveUpBanner';
 import styles from './play.module.css';
@@ -411,10 +419,26 @@ function GuessView({ view, token, clockOffset }: { view: RoomView; token: string
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
+  const [folding, setFolding] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const answer = view.you!.answer;
+  const me = view.you!.id;
 
   useEffect(() => input.current?.focus(), []);
+
+  // Everyone a fold could ride with: anyone else who has not given up.
+  const picks = view.players.filter((p) => p.id !== me && !p.gaveUp);
+  const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? 'someone';
+
+  const giveUp = async (ride?: string) => {
+    if (sending) return;
+    setSending(true);
+    setError('');
+    const result = await send(view.code, token, { type: 'give-up', ...(ride && { ride }) });
+    setSending(false);
+    if (!result.ok) setError(result.error);
+    setFolding(false);
+  };
 
   const lockIn = async (event: FormEvent) => {
     event.preventDefault();
@@ -441,13 +465,44 @@ function GuessView({ view, token, clockOffset }: { view: RoomView; token: string
       )}
 
       {answer ? (
-        <TitleStrip
-          className={styles.receipt}
-          tone={round.kind}
-          top={answer.gaveUp ? 'You gave up' : answer.text}
-          label={`${answer.gaveUp ? 'Tapped out' : 'Locked in'} at ${(answer.elapsedMs / 1000).toFixed(1)} s`}
-          bottom={waitingOn === 0 ? 'Everyone is in' : `Waiting for ${waitingOn} more`}
-        />
+        <>
+          <TitleStrip
+            className={styles.receipt}
+            tone={round.kind}
+            top={
+              !answer.gaveUp
+                ? answer.text
+                : answer.ride
+                  ? `Riding with ${nameOf(answer.ride)}`
+                  : 'You called a stumper'
+            }
+            label={`${answer.gaveUp ? 'Tapped out' : 'Locked in'} at ${(answer.elapsedMs / 1000).toFixed(1)} s`}
+            bottom={waitingOn === 0 ? 'Everyone is in' : `Waiting for ${waitingOn} more`}
+          />
+          {answer.gaveUp && waitingOn > 0 && <HecklePad code={view.code} token={token} />}
+        </>
+      ) : folding ? (
+        <div className={styles.fold}>
+          <Key variant="tone" block disabled={sending} onClick={() => void giveUp()}>
+            Call a stumper
+          </Key>
+          <p className={styles.small}>+{STUMPER_POINTS} if nobody gets it</p>
+          <p className={styles.foldOr}>Or ride with someone, for {RIDE_SHARE * 100}% of what they score</p>
+          <div className={styles.rideList}>
+            {picks.map((p) => (
+              <Key key={p.id} variant="paper" block disabled={sending} onClick={() => void giveUp(p.id)}>
+                {p.name}
+                {p.answered && <small> · locked in</small>}
+              </Key>
+            ))}
+          </div>
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+          <Key variant="quiet" className={styles.giveUp} disabled={sending} onClick={() => setFolding(false)}>
+            Keep guessing
+          </Key>
+        </div>
       ) : (
         <form className={styles.answerForm} onSubmit={lockIn}>
           <Field
@@ -484,12 +539,45 @@ function GuessView({ view, token, clockOffset }: { view: RoomView; token: string
             variant="quiet"
             className={styles.giveUp}
             disabled={sending}
-            onClick={() => void send(view.code, token, { type: 'give-up' })}
+            onClick={() => (view.rideAlong && picks.length > 0 ? setFolding(true) : void giveUp())}
           >
             Give up
           </Key>
+          {/* A fold only pays when someone else is still guessing. */}
+          {picks.length > 0 && !view.rideAlong && (
+            <p className={styles.small}>Giving up bets nobody gets it: +{STUMPER_POINTS} if they don&rsquo;t</p>
+          )}
         </form>
       )}
+    </section>
+  );
+}
+
+/** Gave up, nothing to do: throw things at the big screen until the round ends. */
+function HecklePad({ code, token }: { code: string; token: string }) {
+  const [cooling, setCooling] = useState(false);
+  const heckle = (kind: HeckleKind) => {
+    void send(code, token, { type: 'heckle', kind });
+    setCooling(true);
+    setTimeout(() => setCooling(false), HECKLE_COOLDOWN_MS);
+  };
+  return (
+    <section className={styles.heckles} aria-label="Heckle">
+      <p className={styles.eyebrow}>Heckle the big screen</p>
+      <div className={styles.heckleGrid}>
+        {HECKLES.map((h) => (
+          <button
+            key={h.kind}
+            type="button"
+            className={styles.heckleKey}
+            disabled={cooling}
+            onClick={() => heckle(h.kind)}
+          >
+            <span aria-hidden>{h.face}</span>
+            <small>{h.label}</small>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }
@@ -526,7 +614,10 @@ function RevealView({ view, token, clockOffset }: { view: RoomView; token: strin
 
   let verdict = 'No answer this time';
   if (mine) {
-    if (mine.gaveUp) verdict = 'You gave up';
+    if (mine.gaveUp && mine.ride) {
+      const pick = view.players.find((p) => p.id === mine.ride)?.name ?? 'them';
+      verdict = mine.points > 0 ? `Rode with ${pick}` : `${pick} let you down`;
+    } else if (mine.gaveUp) verdict = mine.stumper ? 'Stumper called' : 'Someone got it';
     else if (mine.correct) verdict = fastest?.playerId === mine.playerId ? 'Right, and first' : 'Right';
     else if (mine.points > 0) verdict = `${mine.yearsOff} ${mine.yearsOff === 1 ? 'year' : 'years'} off`;
     else verdict = 'Not this time';

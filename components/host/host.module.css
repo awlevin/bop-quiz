@@ -956,3 +956,113 @@
   text-decoration: none;
   box-shadow: var(--shadow-key);
 }
+
+/* --- Heckles ------------------------------------------------------------- */
+
+/* Over the deck, clear of the scoreboard: whatever the folded players throw. */
+.heckles {
+  position: absolute;
+  inset: 0 27em 0 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.heckle {
+  position: absolute;
+  bottom: 2em;
+  left: calc(4% + var(--x, 0.5) * 80%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3em;
+  animation: heckle 2.6s var(--ease-out) both;
+}
+
+.heckleFace {
+  font-size: 5.5em;
+  line-height: 1;
+  filter: drop-shadow(0 0.08em 0.12em rgb(0 0 0 / 0.45));
+}
+
+.heckleName {
+  padding: 0.2em 0.7em;
+  border-radius: 99em;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-strip), sans-serif;
+  font-size: 1.1em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Pops up off the bottom, wobbles on the way, fades out near the top. */
+@keyframes heckle {
+  0% {
+    opacity: 0;
+    transform: translateY(4em) scale(0.4) rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1.15) rotate(var(--tilt));
+  }
+  20% {
+    transform: translateY(-2em) scale(1) rotate(calc(var(--tilt) * -0.5));
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26em) scale(0.9) rotate(var(--tilt));
+  }
+}
+
+/* The tomato does not float. It lands, splats, and slides. */
+.heckle[data-kind='tomato'] {
+  bottom: auto;
+  top: 30%;
+  animation-name: splat;
+}
+
+@keyframes splat {
+  0% {
+    opacity: 0;
+    transform: scale(3) rotate(0deg);
+  }
+  14% {
+    opacity: 1;
+    transform: scale(0.9, 1.1) rotate(var(--tilt));
+  }
+  22% {
+    transform: scale(1.25, 0.8) rotate(var(--tilt));
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(3em) scale(1.2, 0.85) rotate(var(--tilt));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(8em) scale(1.2, 0.85) rotate(var(--tilt));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heckle,
+  .heckle[data-kind='tomato'] {
+    animation-name: heckle-still;
+  }
+}
+
+@keyframes heckle-still {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  80% {
+    opacity: 1;
+  }
+}

@@ -6,12 +6,22 @@
 // passed; the first one moves the room on, the rest are no-ops. That is what
 // lets the server be a set of stateless functions.
 
-import { ANSWER_GRACE_MS, MAX_ANSWER_LENGTH, MAX_NAME_LENGTH, MAX_PLAYERS, REVEAL_MS } from './config';
+import {
+  ANSWER_GRACE_MS,
+  HECKLE_COOLDOWN_MS,
+  MAX_ANSWER_LENGTH,
+  MAX_HECKLES_PER_ROUND,
+  MAX_NAME_LENGTH,
+  MAX_PLAYERS,
+  REVEAL_MS,
+  RIDE_SHARE,
+  STUMPER_POINTS,
+} from './config';
 import { DEFAULT_FORMAT, type GameFormat, roundGuessMs, roundKinds } from './format';
 import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { grade } from './score';
 import { CLASSIC } from './setlist';
-import type { Action, ReduceResult, RoomState, Round, Song } from './types';
+import type { Action, Answer, Player, ReduceResult, RoomState, Round, Song } from './types';
 
 export function createRoom(
   code: string,
@@ -55,7 +65,32 @@ function withRound(state: RoomState, round: Round): RoomState {
   return { ...state, rounds };
 }
 
-function startReveal(state: RoomState, now: number): RoomState {
+/**
+ * Pay out the folds. Folding calls a stumper: it pays when someone stayed in
+ * and nobody who did scored a point, which is exactly when the TV says
+ * "Nobody got it". A ride takes a share of what its pick scored by answering.
+ */
+export function settleFolds(answers: Record<string, Answer>, players: Player[]): Record<string, Answer> {
+  const stayedIn = players.filter((p) => !answers[p.id]?.gaveUp);
+  const stumped = stayedIn.length > 0 && stayedIn.every((p) => !answers[p.id]?.points);
+  const here = new Set(players.map((p) => p.id));
+  const settled = { ...answers };
+  for (const [id, answer] of Object.entries(answers)) {
+    if (!answer.gaveUp) continue;
+    if (answer.ride) {
+      const pick = here.has(answer.ride) ? answers[answer.ride] : undefined;
+      const earned = pick && !pick.gaveUp ? pick.points : 0;
+      settled[id] = { ...answer, points: Math.round(earned * RIDE_SHARE) };
+    } else {
+      settled[id] = { ...answer, stumper: stumped, points: stumped ? STUMPER_POINTS : 0 };
+    }
+  }
+  return settled;
+}
+
+function startReveal(prev: RoomState, now: number): RoomState {
+  const before = currentRound(prev)!;
+  const state = withRound(prev, { ...before, answers: settleFolds(before.answers, prev.players) });
   const round = currentRound(state)!;
   const players = state.players.map((p) => ({
     ...p,
@@ -287,14 +322,40 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       if (!state.players.some((p) => p.id === action.playerId)) return fail('You are not in this room.');
       if (round.answers[action.playerId]) return fail('You already locked in an answer.');
       const elapsedMs = Math.min(Math.max(now - round.guessStartedAt, 0), roundGuessMs(round));
+      const fold: Answer = { text: '', elapsedMs, correct: false, gaveUp: true, points: 0 };
+      if (action.ride !== undefined) {
+        if (!state.rideAlong) return fail('This room is not playing Ride along.');
+        const pick = state.players.find((p) => p.id === action.ride);
+        if (!pick || pick.id === action.playerId) return fail('Pick someone else to ride with.');
+        if (round.answers[pick.id]?.gaveUp) return fail(`${pick.name} gave up too.`);
+        fold.ride = pick.id;
+      }
       const next = withRound(state, {
         ...round,
-        answers: {
-          ...round.answers,
-          [action.playerId]: { text: '', elapsedMs, correct: false, gaveUp: true, points: 0 },
-        },
+        answers: { ...round.answers, [action.playerId]: fold },
       });
       return { ok: true, state: allAnswered(next) ? startReveal(next, now) : next };
+    }
+
+    case 'heckle': {
+      const round = currentRound(state);
+      if (state.pause || state.phase !== 'guessing' || !round) return { ok: true, state };
+      if (!round.answers[action.playerId]?.gaveUp) return fail('Heckling is for players who gave up.');
+      const heckles = round.heckles ?? [];
+      const last = heckles.findLast((h) => h.playerId === action.playerId);
+      // Too soon, or too many: drop it quietly. A thumb on the key is not an error.
+      if (heckles.length >= MAX_HECKLES_PER_ROUND || (last && now - last.at < HECKLE_COOLDOWN_MS)) {
+        return { ok: true, state };
+      }
+      const heckle = { id: heckles.length, playerId: action.playerId, kind: action.kind, at: now };
+      return { ok: true, state: withRound(state, { ...round, heckles: [...heckles, heckle] }) };
+    }
+
+    case 'rules': {
+      // Like the setlist, a rule changes only between games.
+      if (state.phase !== 'lobby' && state.phase !== 'finished') return fail('The game is already running.');
+      if (Boolean(state.rideAlong) === action.rideAlong) return { ok: true, state };
+      return { ok: true, state: { ...state, rideAlong: action.rideAlong } };
     }
 
     case 'next': {

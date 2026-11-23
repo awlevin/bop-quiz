@@ -22,6 +22,8 @@ const LATE_MS = 2000;
 interface Notice {
   key: string;
   name: string;
+  /** Ride along: who they backed. Otherwise the fold calls a stumper. */
+  ridingWith: string | null;
 }
 
 /** The other players who have given up this round, keyed by round so the next round starts afresh. */
@@ -30,7 +32,11 @@ function giveUps(view: RoomView): Notice[] {
   if (!round) return [];
   return view.players
     .filter((p) => p.gaveUp && p.id !== view.you?.id)
-    .map((p) => ({ key: `${round.index}:${p.id}`, name: p.name }));
+    .map((p) => ({
+      key: `${round.index}:${p.id}`,
+      name: p.name,
+      ridingWith: p.ridingWith ? (view.players.find((q) => q.id === p.ridingWith)?.name ?? null) : null,
+    }));
 }
 
 function live(view: RoomView): boolean {
@@ -65,13 +71,23 @@ export function GiveUpBanner({ view }: { view: RoomView }) {
   return (
     <div className={styles.stack} role="status" aria-live="polite">
       {queue.slice(0, MAX_SHOWN).map((n) => (
-        <Pill key={n.key} id={n.key} name={n.name} onDone={done} />
+        <Pill key={n.key} id={n.key} name={n.name} ridingWith={n.ridingWith} onDone={done} />
       ))}
     </div>
   );
 }
 
-function Pill({ id, name, onDone }: { id: string; name: string; onDone: (id: string) => void }) {
+function Pill({
+  id,
+  name,
+  ridingWith,
+  onDone,
+}: {
+  id: string;
+  name: string;
+  ridingWith: string | null;
+  onDone: (id: string) => void;
+}) {
   const [leaving, setLeaving] = useState(false);
   // The timers run in JS, not in the animation: with reduced motion the slides
   // are stilled (globals.css), but the banner still stays its 2.5 seconds.
@@ -93,7 +109,7 @@ function Pill({ id, name, onDone }: { id: string; name: string; onDone: (id: str
         </svg>
       </span>
       <span className={styles.text}>
-        <strong>{name}</strong> gave up
+        <strong>{name}</strong> gave up · {ridingWith ? `rides with ${ridingWith}` : 'calls a stumper'}
       </span>
     </p>
   );

@@ -8,6 +8,8 @@ Notes on what's changed. Newest first.
 - **🎚️ Easy, Medium or Hard (experimental).** A new *Difficulty* setlist mode plays only the best-known songs of every decade since the '60s: the top 10 of each on Easy, 20 on Medium, 30 on Hard, or pick your own number.
 - **🔢 Shape the game (experimental).** The host's settings menu has *Rounds*: choose how many songs ask for the title, the artist, the year and the album, and play each clip up to three times. It works with every setlist mode.
 - **🏳️ Give-ups on every phone.** When someone gives up, the other phones show a small "Ben gave up" note for a moment. The host can keep it to the TV instead.
+- **🤷 Giving up is a bet.** Tapping out calls a stumper: if nobody still guessing gets it, you score 300. Then heckle the big screen from your phone with tomatoes, air horns and slow claps until the song ends.
+- **🤝 Ride along (house rule).** Turn it on in the host's settings and giving up can back a player who's still in instead, for a quarter of whatever they score. Off by default.
 
 ### 💅 Nits
 - **What's new has a home.** This page. Find it from the link at the bottom of the home screen.

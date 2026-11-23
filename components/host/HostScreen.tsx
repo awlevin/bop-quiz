@@ -34,6 +34,8 @@ import { Confetti } from './Confetti';
 import { GiveUpNoticeSetting, useGiveUpNoticeSync } from './GiveUpNotice';
 import { FormatLobby, FormatSetting, useFormatSync } from './Format';
 import { Halo } from './Halo';
+import { HeckleLayer } from './Heckles';
+import { HouseRulesSetting, useHouseRulesSync } from './HouseRules';
 import styles from './host.module.css';
 import { QrCode } from './JoinCode';
 import { pickedPlayers, SetlistLobby, SetlistModeSetting, useSetlistSync } from './Setlist';
@@ -67,6 +69,7 @@ export function HostScreen({ code }: { code: string }) {
   );
   const director = useDirector(view, clockOffset, settings.lobbyMusic, report);
   useSetlistSync(view, token ?? null);
+  useHouseRulesSync(view, token ?? null);
   useGiveUpNoticeSync(view, token ?? null);
   useFormatSync(view, token ?? null);
 
@@ -321,6 +324,7 @@ function SettingsMenu({
             onChange={(lobbyMusic) => updateSettings({ lobbyMusic })}
           />
           <GiveUpNoticeSetting />
+          <HouseRulesSetting />
           {soundCheck && (
             <button
               type="button"
@@ -524,9 +528,10 @@ const HEADING_FADE = {
   transition: { duration: 0.28 },
 };
 
-function answerNote(answer: RevealedAnswer | undefined, kind: string): string {
+function answerNote(answer: RevealedAnswer | undefined, kind: string, nameOf: (id: string) => string): string {
   if (!answer) return 'No answer';
-  if (answer.gaveUp) return 'Gave up';
+  if (answer.gaveUp && answer.ride) return `Rode with ${nameOf(answer.ride)}`;
+  if (answer.gaveUp) return answer.stumper ? 'Called the stumper' : 'Gave up';
   if (kind === 'year' && answer.yearsOff !== undefined && answer.yearsOff > 0) {
     return `${answer.text} · ${answer.yearsOff} ${answer.yearsOff === 1 ? 'year' : 'years'} off`;
   }
@@ -555,10 +560,13 @@ function Game({
     .filter((a) => a.correct)
     .sort((a, b) => a.elapsedMs - b.elapsedMs)[0]?.playerId;
   // Year rounds can pay out with nobody exactly right: credit the best near miss.
+  // Not a fold: what those earn is a side bet, not a guess.
   const closest = (round.answers ?? [])
-    .filter((a) => a.points > 0)
+    .filter((a) => a.points > 0 && !a.gaveUp)
     .sort((a, b) => b.points - a.points)[0]?.playerId;
   const winnerName = view.players.find((p) => p.id === (fastest ?? closest))?.name;
+  const nameOf = (id: string) => view.players.find((p) => p.id === id)?.name ?? 'someone';
+  const callers = (round.answers ?? []).filter((a) => a.stumper).map((a) => nameOf(a.playerId));
 
   return (
     <div className={styles.game}>
@@ -570,6 +578,11 @@ function Game({
               {winnerName ? (
                 <>
                   <em>{winnerName}</em> {fastest ? 'got it first' : 'came closest'}
+                </>
+              ) : callers.length > 0 ? (
+                <>
+                  <em>{callers.length > 2 ? `${callers.length} players` : callers.join(' & ')}</em> called the
+                  stumper
                 </>
               ) : (
                 'Nobody got it'
@@ -664,7 +677,15 @@ function Game({
                   rank={rank}
                   name={player.name}
                   lit={revealed ? Boolean(answer?.points) : player.answered && !player.gaveUp}
-                  note={revealed ? answerNote(answer, round.kind) : player.gaveUp ? 'Gave up' : undefined}
+                  note={
+                    revealed
+                      ? answerNote(answer, round.kind, nameOf)
+                      : player.ridingWith
+                        ? `Riding with ${nameOf(player.ridingWith)}`
+                        : player.gaveUp
+                          ? 'Gave up'
+                          : undefined
+                  }
                   badge={
                     revealed && answer?.points
                       ? `${fastest === player.id ? '★ ' : ''}+${answer.points}`
@@ -696,11 +717,22 @@ function Game({
             <WhiteFlag
               key={p.id}
               name={p.name}
+              ridingWith={p.ridingWith ? nameOf(p.ridingWith) : undefined}
               seed={`${p.id}:${round.index}`}
               slot={i}
               tone={round.kind}
             />
           ))}
+
+      {view.phase === 'guessing' && round.heckles && (
+        <HeckleLayer
+          round={round.index}
+          heckles={round.heckles}
+          players={view.players}
+          clockOffset={clockOffset}
+          frozenAt={view.pause?.at}
+        />
+      )}
 
       {revealed && round.revealStartedAt !== null && (
         <RevealBar startedAt={round.revealStartedAt} clockOffset={clockOffset} frozenAt={view.pause?.at} />
