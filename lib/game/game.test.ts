@@ -3,7 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { chooseFinales, chooseSongs } from '@/lib/catalog';
 import { createSoloRoom } from '@/lib/solo/local';
 
-import { ANSWER_GRACE_MS, GUESS_MS, REVEAL_MS, ROUNDS_PER_GAME } from './config';
+import {
+  ANSWER_GRACE_MS,
+  GUESS_MS,
+  HECKLE_COOLDOWN_MS,
+  REVEAL_MS,
+  ROUNDS_PER_GAME,
+  STUMPER_POINTS,
+} from './config';
 import { matchesArtist, matchesText, parseYear } from './match';
 import { createRoom, reduce } from './reducer';
 import { grade, speedPoints, yearShare } from './score';
@@ -281,6 +288,122 @@ describe('sound check', () => {
   });
 });
 
+describe('giving up', () => {
+  it('calls a stumper, which pays when nobody who stayed in scored', () => {
+    let state = guessing(['Ana', 'Ben', 'Cy']);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'answer', playerId: 'p1', text: 'wrong' }, 3000);
+    // Cy never answers: the clock runs out on him.
+    state = run(state, { type: 'tick' }, 1000 + GUESS_MS + ANSWER_GRACE_MS);
+    expect(state.phase).toBe('reveal');
+    expect(state.rounds[0].answers.p0).toMatchObject({ stumper: true, points: STUMPER_POINTS });
+    expect(state.players.map((p) => p.score)).toEqual([STUMPER_POINTS, 0, 0]);
+  });
+
+  it('loses the bet when anyone scores, a near miss on the year included', () => {
+    let state = guessing(['Ana', 'Ben']);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'answer', playerId: 'p1', text: 'song 1' }, 3000);
+    expect(state.rounds[0].answers.p0).toMatchObject({ stumper: false, points: 0 });
+
+    // Round seven asks for the year: song 7 came out in 1997.
+    let year = guessing(['Ana', 'Ben']);
+    year = { ...year, roundIndex: 6, phase: 'loading' };
+    year = run(year, { type: 'audio-started', roundIndex: 6 }, 5000);
+    year = run(year, { type: 'give-up', playerId: 'p0' }, 6000);
+    year = run(year, { type: 'answer', playerId: 'p1', text: '1999' }, 7000);
+    expect(year.rounds[6].answers.p1.points).toBeGreaterThan(0);
+    expect(year.rounds[6].answers.p0.points).toBe(0);
+  });
+
+  it('pays nobody when nobody stayed in, so folding together, or alone, is worth nothing', () => {
+    let state = guessing(['Ana', 'Ben']);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'give-up', playerId: 'p1' }, 2500);
+    expect(state.phase).toBe('reveal');
+    expect(state.players.every((p) => p.score === 0)).toBe(true);
+
+    let solo = run(createSoloRoom(0), { type: 'start', songs: SONGS, spares: SPARES }, 10);
+    solo = run(solo, { type: 'audio-started', roundIndex: 0 }, 20);
+    solo = run(solo, { type: 'give-up', playerId: 'solo' }, 30);
+    expect(solo.players[0].score).toBe(0);
+  });
+
+  it('rides along only when the room plays it, and only with someone still in', () => {
+    let state = guessing(['Ana', 'Ben', 'Cy']);
+    expect(reduce(state, { type: 'give-up', playerId: 'p0', ride: 'p1' }, 2000)).toMatchObject({
+      ok: false,
+      error: 'This room is not playing Ride along.',
+    });
+
+    let lobby = lobbyWith(['Ana', 'Ben', 'Cy']);
+    lobby = run(lobby, { type: 'rules', rideAlong: true }, 0);
+    expect(viewFor(lobby, { role: 'player', playerId: 'p0' }, 0).rideAlong).toBe(true);
+    state = run(lobby, { type: 'start', songs: SONGS, spares: SPARES }, 1000);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    expect(reduce(state, { type: 'rules', rideAlong: false }, 1500).ok).toBe(false);
+
+    expect(reduce(state, { type: 'give-up', playerId: 'p0', ride: 'p0' }, 2000).ok).toBe(false);
+    expect(reduce(state, { type: 'give-up', playerId: 'p0', ride: 'nobody' }, 2000).ok).toBe(false);
+    state = run(state, { type: 'give-up', playerId: 'p2' }, 2000);
+    expect(reduce(state, { type: 'give-up', playerId: 'p0', ride: 'p2' }, 2000).ok).toBe(false);
+
+    state = run(state, { type: 'give-up', playerId: 'p0', ride: 'p1' }, 2000);
+    const host = viewFor(state, { role: 'host' }, 2000);
+    expect(host.players[0]).toMatchObject({ gaveUp: true, ridingWith: 'p1' });
+    expect(viewFor(state, { role: 'player', playerId: 'p0' }, 2000).you?.answer?.ride).toBe('p1');
+
+    // Ben gets it at 3 s into the song: 900 points, and Ana takes a quarter.
+    state = run(state, { type: 'answer', playerId: 'p1', text: 'song 1' }, 4000);
+    expect(state.players.map((p) => p.score)).toEqual([225, 900, 0]);
+    // A ride is not a stumper call, and Cy's stumper lost.
+    expect(state.rounds[0].answers.p0.stumper).toBeUndefined();
+    expect(state.rounds[0].answers.p2).toMatchObject({ stumper: false, points: 0 });
+  });
+
+  it('rides on nothing when the pick folds too', () => {
+    let state: RoomState = { ...lobbyWith(['Ana', 'Ben', 'Cy']), rideAlong: true };
+    state = run(state, { type: 'start', songs: SONGS, spares: SPARES }, 1000);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    state = run(state, { type: 'give-up', playerId: 'p0', ride: 'p1' }, 2000);
+    state = run(state, { type: 'give-up', playerId: 'p1' }, 2500);
+    state = run(state, { type: 'answer', playerId: 'p2', text: 'wrong' }, 3000);
+    // Ben's stumper paid, but that is Ben's: Ana rode his guess, and he had none.
+    expect(state.players.map((p) => p.score)).toEqual([0, STUMPER_POINTS, 0]);
+  });
+});
+
+describe('heckling', () => {
+  it('is for players who gave up, while the song plays, and only the TV sees it', () => {
+    let state = guessing(['Ana', 'Ben']);
+    expect(reduce(state, { type: 'heckle', playerId: 'p0', kind: 'tomato' }, 1500).ok).toBe(false);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'heckle', playerId: 'p0', kind: 'tomato' }, 2100);
+    expect(viewFor(state, { role: 'host' }, 2100).round?.heckles).toEqual([
+      { id: 0, playerId: 'p0', kind: 'tomato', at: 2100 },
+    ]);
+    expect(viewFor(state, { role: 'player', playerId: 'p1' }, 2100).round?.heckles).toBeUndefined();
+  });
+
+  it('drops a heckle that comes too soon after the last', () => {
+    let state = guessing(['Ana', 'Ben']);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'heckle', playerId: 'p0', kind: 'horn' }, 2100);
+    const again = run(state, { type: 'heckle', playerId: 'p0', kind: 'horn' }, 2200);
+    expect(again).toBe(state);
+    state = run(state, { type: 'heckle', playerId: 'p0', kind: 'horn' }, 2100 + HECKLE_COOLDOWN_MS);
+    expect(state.rounds[0].heckles).toHaveLength(2);
+  });
+
+  it('stops when the round does', () => {
+    let state = guessing(['Ana', 'Ben']);
+    state = run(state, { type: 'give-up', playerId: 'p0' }, 2000);
+    state = run(state, { type: 'answer', playerId: 'p1', text: 'song 1' }, 3000);
+    expect(state.phase).toBe('reveal');
+    expect(run(state, { type: 'heckle', playerId: 'p0', kind: 'clap' }, 3500)).toBe(state);
+  });
+});
+
 describe('ending a game', () => {
   /** Ana and Ben, three songs in and paused, with points on the board. */
   function pausedMidGame(): RoomState {
@@ -377,7 +500,7 @@ describe('views', () => {
     expect(JSON.stringify(player)).not.toContain('t0');
     expect(JSON.stringify(host)).not.toContain('Song 1');
     expect(host.round?.previewUrl).toBe('https://audio/1.m4a');
-    expect(player.you?.answer).toEqual({ text: 'song 1', elapsedMs: 1000, gaveUp: false });
+    expect(player.you?.answer).toEqual({ text: 'song 1', elapsedMs: 1000, gaveUp: false, ride: null });
     expect(player.players.map((p) => p.answered)).toEqual([true, false]);
 
     state = run(state, { type: 'answer', playerId: 'p1', text: 'x' }, 3000);

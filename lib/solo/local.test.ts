@@ -62,7 +62,7 @@ describe('quick play', () => {
     expect(host.round?.previewUrl).toBe('https://audio/1.m4a');
     state = run(state, { type: 'answer', playerId: SOLO_PLAYER_ID, text: 'nope' }, 2000);
     const player = viewFor(state, { role: 'player', playerId: SOLO_PLAYER_ID }, 2000);
-    expect(player.you?.answer).toEqual({ text: 'nope', elapsedMs: 1000, gaveUp: false });
+    expect(player.you?.answer).toEqual({ text: 'nope', elapsedMs: 1000, gaveUp: false, ride: null });
   });
 
   it('has no deadline while nothing is running', () => {

@@ -23,6 +23,9 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       roundView.previewUrl = round.song.previewUrl;
       roundView.nextPreviewUrl = state.rounds[state.roundIndex + 1]?.song.previewUrl;
     }
+    if (viewer.role === 'host' && state.phase === 'guessing' && round.heckles?.length) {
+      roundView.heckles = round.heckles;
+    }
     if (revealed) {
       roundView.song = round.song;
       roundView.answers = Object.entries(round.answers).map(([playerId, a]) => ({
@@ -43,10 +46,12 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       score: p.score,
       answered: inRound && Boolean(round.answers[p.id]),
       gaveUp: inRound && Boolean(round.answers[p.id]?.gaveUp),
+      ridingWith: (inRound && round.answers[p.id]?.ride) || null,
     })),
     round: roundView,
     pause: state.pause ?? null,
     audioChecked: state.audioChecked !== false,
+    rideAlong: Boolean(state.rideAlong),
     setlist: { mode: setlist.mode },
     serverNow: now,
   };
@@ -76,7 +81,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       id: viewer.playerId,
       leader: state.players[0]?.id === viewer.playerId,
       answer: mine
-        ? { text: mine.text, elapsedMs: mine.elapsedMs, gaveUp: Boolean(mine.gaveUp) }
+        ? { text: mine.text, elapsedMs: mine.elapsedMs, gaveUp: Boolean(mine.gaveUp), ride: mine.ride ?? null }
         : null,
       taste: setlist.picks[viewer.playerId] ?? null,
     };

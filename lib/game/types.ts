@@ -39,7 +39,23 @@ export interface Answer {
   yearsOff?: number;
   /** The player tapped out instead of answering. */
   gaveUp?: boolean;
+  /** Ride along: the player this folder backed instead of calling a stumper. */
+  ride?: string;
+  /** Set at the reveal: this folder called a stumper, and nobody got it. */
+  stumper?: boolean;
   points: number;
+}
+
+/** What a folded player can throw at the television. The faces live in `heckles.ts`. */
+export type HeckleKind = 'tomato' | 'horn' | 'snore' | 'clap' | 'clock' | 'cheer';
+
+export interface Heckle {
+  /** In order within the round. */
+  id: number;
+  playerId: string;
+  kind: HeckleKind;
+  /** Server clock. */
+  at: number;
 }
 
 export interface Round {
@@ -49,6 +65,8 @@ export interface Round {
   guessStartedAt: number | null;
   revealStartedAt: number | null;
   answers: Record<string, Answer>;
+  /** What the folded players threw while the song played. Absent before the first. */
+  heckles?: Heckle[];
 }
 
 export interface RoomState {
@@ -77,6 +95,8 @@ export interface RoomState {
   audioChecked?: boolean;
   /** Where the songs come from. Absent in rooms older than setlist modes: Classic. */
   setlist?: Setlist;
+  /** House rule: folding can back another player instead of calling a stumper. Absent is off. */
+  rideAlong?: boolean;
   createdAt: number;
 }
 
@@ -90,7 +110,11 @@ export type Action =
   | { type: 'audio-started'; roundIndex: number }
   | { type: 'audio-failed'; roundIndex: number }
   | { type: 'answer'; playerId: string; text: string }
-  | { type: 'give-up'; playerId: string }
+  /** `ride`: who to back, when the room plays Ride along. Without it, the fold calls a stumper. */
+  | { type: 'give-up'; playerId: string; ride?: string }
+  | { type: 'heckle'; playerId: string; kind: HeckleKind }
+  /** The host's house rules, between games. */
+  | { type: 'rules'; rideAlong: boolean }
   | { type: 'next'; roundIndex: number }
   | { type: 'audio-check' }
   /** Back to the lobby from a paused game. `playerId` is null from the host screen; a phone must be the leader's. */
@@ -114,6 +138,8 @@ export interface PlayerView {
   answered: boolean;
   /** Giving up is public the moment it happens: the TV makes a scene of it. */
   gaveUp: boolean;
+  /** Ride along: who this folder backed, public too. Null otherwise. */
+  ridingWith: string | null;
 }
 
 export interface RevealedAnswer extends Answer {
@@ -135,6 +161,8 @@ export interface RoundView {
   /** Present from the reveal onwards. */
   song?: Song;
   answers?: RevealedAnswer[];
+  /** Host only, while the song plays: what the folded players are throwing. */
+  heckles?: Heckle[];
 }
 
 export interface RoomView {
@@ -151,6 +179,8 @@ export interface RoomView {
   lobbyUrl?: string;
   /** False until the host screen's sound has been checked; starting waits for it. */
   audioChecked: boolean;
+  /** House rule: a fold can back another player. */
+  rideAlong: boolean;
   setlist: {
     mode: SetlistMode;
     /** Host only: the TV's own picks. */
@@ -164,7 +194,7 @@ export interface RoomView {
     /** The first player in the room runs it from their phone: start, play again. */
     leader: boolean;
     /** What this player locked in. Whether it was right waits for the reveal. */
-    answer: { text: string; elapsedMs: number; gaveUp: boolean } | null;
+    answer: { text: string; elapsedMs: number; gaveUp: boolean; ride: string | null } | null;
     /** This player's Crowd picks, or null before they pick. */
     taste: Taste | null;
   };

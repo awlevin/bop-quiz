@@ -26,6 +26,8 @@ function pick(seed: string): string {
 
 interface Props {
   name: string;
+  /** Ride along: the name of who this player backed. */
+  ridingWith?: string;
   /** Stable per player and round, so a re-render keeps the same excuse. */
   seed: string;
   /** Flags that land together fan out instead of stacking. */
@@ -33,11 +35,20 @@ interface Props {
   tone: QuestionKind;
 }
 
-/** Someone gave up. The room should see it: drops in, hangs its head, falls off. Silently. */
-export function WhiteFlag({ name, seed, slot, tone }: Props) {
+/**
+ * Someone gave up. The room should see it: drops in, hangs its head, falls
+ * off. Silently. Giving up is a bet that nobody gets it, or, in Ride along,
+ * a vote for someone who might, and the flag says which.
+ */
+export function WhiteFlag({ name, ridingWith, seed, slot, tone }: Props) {
   return (
     <div className={styles.flag} style={{ '--slot': slot } as React.CSSProperties} role="status">
-      <TitleStrip tone={tone} top={name} label="Gave up" bottom={pick(seed)} />
+      <TitleStrip
+        tone={tone}
+        top={name}
+        label={ridingWith ? 'Gave up · Riding along' : 'Gave up · Calls a stumper'}
+        bottom={ridingWith ? `is riding with ${ridingWith}` : pick(seed)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { pickSongs } from '@/lib/catalog';
 import { ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
+import { isHeckleKind } from '@/lib/game/heckles';
 import { cleanTaste, isSetlistMode, tastesFor } from '@/lib/game/setlist';
 import type { Action } from '@/lib/game/types';
 import { dispatch, identify, newPlayerId, newToken, normalizeCode } from '@/lib/realtime/rooms';
@@ -18,6 +19,9 @@ interface Body {
   roundIndex?: number;
   mode?: unknown;
   taste?: unknown;
+  ride?: unknown;
+  kind?: unknown;
+  rideAlong?: unknown;
 }
 
 export async function POST(
@@ -102,10 +106,17 @@ export async function POST(
     if (body.type === 'setlist' && isSetlistMode(body.mode) && taste) {
       action = { type: 'setlist', mode: body.mode, taste };
     }
+    if (body.type === 'rules') action = { type: 'rules', rideAlong: body.rideAlong === true };
   } else {
     const { playerId } = viewer;
     if (body.type === 'answer') action = { type: 'answer', playerId, text: String(body.text ?? '') };
-    if (body.type === 'give-up') action = { type: 'give-up', playerId };
+    if (body.type === 'give-up') {
+      action = { type: 'give-up', playerId, ...(typeof body.ride === 'string' && { ride: body.ride }) };
+    }
+    if (body.type === 'heckle') {
+      if (!isHeckleKind(body.kind)) return refuse(400, 'That is not a heckle.');
+      action = { type: 'heckle', playerId, kind: body.kind };
+    }
     if (body.type === 'rename') action = { type: 'rename', playerId, name: String(body.name ?? '') };
     if (body.type === 'leave') action = { type: 'remove-player', playerId };
     if (body.type === 'taste' && taste) action = { type: 'taste', playerId, taste };

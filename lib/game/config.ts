@@ -30,3 +30,15 @@ export const MAX_ANSWER_LENGTH = 80;
 
 export const MAX_POINTS = 1000;
 export const MIN_POINTS = 500;
+
+/** Folding is a bet that nobody gets the song: it pays this when the room is stumped. */
+export const STUMPER_POINTS = 300;
+/** Ride along (a house rule, off by default): a folder takes this share of their pick's points. */
+export const RIDE_SHARE = 0.25;
+
+/** Folded players heckle from their phones; one per player this often, at most. */
+export const HECKLE_COOLDOWN_MS = 700;
+/** And no more than this many in one round, so a round stays a small thing to store. */
+export const MAX_HECKLES_PER_ROUND = 80;
+/** How long one heckle stays on the television. */
+export const HECKLE_MS = 2600;

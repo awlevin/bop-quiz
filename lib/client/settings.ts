@@ -12,10 +12,12 @@ export interface Settings {
   setlistMode: SetlistMode;
   /** What this screen picks in Host picks mode. */
   hostTaste: Taste;
+  /** House rule: a fold can back another player. The host screen copies it into the room. */
+  rideAlong: boolean;
 }
 
 const KEY = 'mm:settings';
-const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE };
+const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE, rideAlong: false };
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
 function sanitize(stored: Partial<Settings>): Settings {
@@ -24,6 +26,7 @@ function sanitize(stored: Partial<Settings>): Settings {
     ...stored,
     setlistMode: isSetlistMode(stored.setlistMode) ? stored.setlistMode : DEFAULTS.setlistMode,
     hostTaste: cleanTaste(stored.hostTaste) ?? DEFAULTS.hostTaste,
+    rideAlong: stored.rideAlong === true,
   };
 }
 

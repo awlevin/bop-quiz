@@ -41,7 +41,14 @@ plays from where they are sitting. Nothing to install, no accounts.
    rounds, then the final scores with a song to see them out.
 
 Nobody knows it? Hit **Give up** to tap out of the round. A white flag drops
-onto the television.
+onto the television, and you are betting the song is a **stumper**: if
+nobody who stayed in scores on it, you get 300 points. If anyone does, you
+get nothing. Until the round ends your phone becomes a heckle pad: tomatoes,
+air horns and slow claps float up over the record on the big screen.
+
+**Ride along** is a house rule in the TV's settings, off by default. With it
+on, giving up asks whether to call a stumper or to back a player who is still
+in, for a quarter of whatever they score on that song.
 
 Need a break? Any phone can pause the game. From the pause screen the host,
 at the television or on the first player's phone, can also end the game: the

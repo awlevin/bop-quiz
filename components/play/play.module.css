@@ -378,3 +378,83 @@
   font-size: 0.9rem;
   font-weight: 600;
 }
+
+/* --- Giving up ----------------------------------------------------------- */
+
+.fold {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.foldOr {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  text-align: center;
+  color: var(--chrome);
+}
+
+.rideList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rideList small {
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+/* Gave up: something to do with the rest of the song. */
+.heckles {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+}
+
+.heckleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.heckleKey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 5.5rem;
+  padding: 0.6rem 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--chrome) 25%, transparent);
+  border-radius: 1rem;
+  background: var(--booth-lift);
+  color: var(--chrome);
+  cursor: pointer;
+  transition:
+    transform 120ms,
+    opacity 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.heckleKey span {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.heckleKey small {
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.heckleKey:active {
+  transform: scale(0.92);
+}
+
+.heckleKey:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
