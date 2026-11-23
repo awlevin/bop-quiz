@@ -158,3 +158,14 @@
 .difficulty[data-tone='paper'] .summary b {
   color: var(--ink);
 }
+
+/* The settings menu is narrow: the four keys share one row. */
+.difficulty[data-tone='paper'] .keys {
+  flex-wrap: nowrap;
+}
+
+.difficulty[data-tone='paper'] .key {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 0.3em;
+}
