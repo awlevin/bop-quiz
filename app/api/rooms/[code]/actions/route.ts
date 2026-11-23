@@ -1,5 +1,6 @@
 import { pickSongs } from '@/lib/catalog';
-import { ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
+import { SPARE_SONGS } from '@/lib/game/config';
+import { cleanFormat, DEFAULT_FORMAT, roundCount } from '@/lib/game/format';
 import { cleanTaste, isSetlistMode, tastesFor } from '@/lib/game/setlist';
 import type { Action } from '@/lib/game/types';
 import { dispatch, identify, newPlayerId, newToken, normalizeCode } from '@/lib/realtime/rooms';
@@ -18,6 +19,7 @@ interface Body {
   roundIndex?: number;
   mode?: unknown;
   taste?: unknown;
+  format?: unknown;
 }
 
 export async function POST(
@@ -70,17 +72,19 @@ export async function POST(
   if (body.type === 'start' && (viewer.role === 'host' || leader)) {
     // The reducer refuses too; this just skips drawing songs for nothing.
     if (room.audioChecked === false) return refuse(409, 'Check the sound on the big screen first.');
+    const rounds = roundCount(room.format ?? DEFAULT_FORMAT);
     const { songs, finales } = await pickSongs(
-      ROUNDS_PER_GAME + SPARE_SONGS,
+      rounds + SPARE_SONGS,
       room.playedSongIds,
       room.finales?.[0]?.id,
       // Crowd picks or Host picks; none at all is a Classic draw.
       tastesFor(room.setlist, room.players.map((p) => p.id)),
+      rounds,
     );
     action = {
       type: 'start',
-      songs: songs.slice(0, ROUNDS_PER_GAME),
-      spares: songs.slice(ROUNDS_PER_GAME),
+      songs: songs.slice(0, rounds),
+      spares: songs.slice(rounds),
       finales,
     };
   }
@@ -101,6 +105,11 @@ export async function POST(
     }
     if (body.type === 'setlist' && isSetlistMode(body.mode) && taste) {
       action = { type: 'setlist', mode: body.mode, taste };
+    }
+    if (body.type === 'format') {
+      const format = cleanFormat(body.format);
+      if (!format) return refuse(400, 'That is not a game format.');
+      action = { type: 'format', format };
     }
   } else {
     const { playerId } = viewer;

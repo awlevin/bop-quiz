@@ -254,6 +254,27 @@ export class Jukebox {
     setTimeout(() => loads === old.loads && old.audio.pause(), fadeOutOld * 1000 + 60);
   }
 
+  /**
+   * Start the song the room is hearing over from `offset` seconds, for a
+   * round that plays its clip more than once: a quick dip out over `dip`
+   * seconds, the jump, and back up as fast. Call it `dip` seconds early and
+   * the jump lands on time. While paused it only moves the place, so the
+   * song resumes from there.
+   */
+  async replay(offset = 0, dip = 0.3): Promise<void> {
+    const deck = this.decks[this.live];
+    if (!deck.audio.src || (deck.audio.paused && !this.held)) return;
+    const loads = deck.loads;
+    if (!this.held) {
+      this.ramp(deck, 0, dip);
+      await wait(dip * 1000);
+    }
+    // Another song took over meanwhile: leave it alone.
+    if (loads !== deck.loads || this.decks[this.live] !== deck) return;
+    deck.audio.currentTime = offset;
+    if (!this.held) this.ramp(deck, deck.volume, dip);
+  }
+
   /** Let the music fall away. Resolves when it is silent. */
   async fadeOut(seconds: number): Promise<void> {
     this.playlistRun++;

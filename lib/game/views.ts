@@ -1,3 +1,4 @@
+import { DEFAULT_FORMAT, roundGuessMs } from './format';
 import { CLASSIC } from './setlist';
 import type { RoomState, RoomView, RoundView } from './types';
 
@@ -16,6 +17,9 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
       total: state.rounds.length,
       kind: round.kind,
       kindChanged: state.rounds[state.roundIndex - 1]?.kind !== round.kind,
+      kinds: state.rounds.map((r) => r.kind),
+      guessMs: roundGuessMs(round),
+      plays: round.plays ?? 1,
       guessStartedAt: round.guessStartedAt,
       revealStartedAt: round.revealStartedAt,
     };
@@ -48,6 +52,7 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     pause: state.pause ?? null,
     audioChecked: state.audioChecked !== false,
     setlist: { mode: setlist.mode },
+    format: state.format ?? DEFAULT_FORMAT,
     serverNow: now,
   };
 

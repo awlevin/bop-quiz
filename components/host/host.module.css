@@ -37,14 +37,14 @@
 .pips {
   display: flex;
   align-items: center;
-  gap: 0.45em;
+  gap: var(--pip-gap, 0.45em);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .pips li {
-  width: 1.5em;
+  width: var(--pip-width, 1.5em);
   height: 0.5em;
   border-radius: 99em;
   background: var(--tone);
@@ -89,6 +89,10 @@
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 1em 2.5em rgb(0 0 0 / 0.45);
+  /* Every setting open at once is taller than a TV: scroll inside the panel. */
+  max-height: calc(100dvh - 7.5em);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .settingsPanel h2 {
@@ -385,6 +389,17 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--paper);
+}
+
+.playCount {
+  align-self: center;
+  font-family: var(--font-strip), sans-serif;
+  font-size: 1.05em;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--chrome);
 }
 
 .countdown[data-urgent='true'] {

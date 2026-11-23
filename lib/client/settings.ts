@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
+import { cleanFormat, DEFAULT_FORMAT, type GameFormat } from '@/lib/game/format';
 import { cleanTaste, isSetlistMode, NO_TASTE, type SetlistMode, type Taste } from '@/lib/game/setlist';
 
 // Host-screen preferences, kept in this browser.
@@ -12,10 +13,12 @@ export interface Settings {
   setlistMode: SetlistMode;
   /** What this screen picks in Host picks mode. */
   hostTaste: Taste;
+  /** Experimental: rounds of each kind and plays per song. Copied into the room like the setlist. */
+  format: GameFormat;
 }
 
 const KEY = 'mm:settings';
-const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE };
+const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE, format: DEFAULT_FORMAT };
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
 function sanitize(stored: Partial<Settings>): Settings {
@@ -24,6 +27,7 @@ function sanitize(stored: Partial<Settings>): Settings {
     ...stored,
     setlistMode: isSetlistMode(stored.setlistMode) ? stored.setlistMode : DEFAULTS.setlistMode,
     hostTaste: cleanTaste(stored.hostTaste) ?? DEFAULTS.hostTaste,
+    format: cleanFormat(stored.format) ?? DEFAULTS.format,
   };
 }
 

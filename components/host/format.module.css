@@ -1,0 +1,86 @@
+/* The game format on the TV: steppers in the settings menu, and a line in the lobby.
+ * The setting's frame and title come from setlist.module.css, so the two read as a pair. */
+
+/* --- Settings menu (paper) ----------------------------------------------- */
+
+/* Focused only to keep focus in the menu after Reset. */
+.setting:focus {
+  outline: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.18em 0;
+}
+
+.rowLabel {
+  flex: 1;
+}
+
+.step {
+  flex: none;
+  width: 1.7em;
+  height: 1.7em;
+  border: 0.12em solid var(--ink-soft);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 160ms,
+    color 160ms;
+}
+
+.step:hover:not([aria-disabled='true']) {
+  border-color: var(--cherry);
+  color: var(--cherry);
+}
+
+.step[aria-disabled='true'] {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.value {
+  min-width: 1.4em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0.2em 0 0.5em;
+  font-size: 0.82em;
+  color: var(--ink-soft);
+}
+
+.reset {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cherry);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 0.82em;
+  line-height: 1.25;
+  color: var(--ink-soft);
+}
+
+/* --- Lobby (booth) ------------------------------------------------------- */
+
+.lobby {
+  font-size: 1em;
+  color: var(--chrome);
+}

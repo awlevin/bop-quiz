@@ -4,6 +4,7 @@
 // never see it: they get a RoomView, built per recipient by `views.ts`, which
 // holds back the answer until the reveal.
 
+import type { GameFormat } from './format';
 import type { Setlist, SetlistMode, Taste } from './setlist';
 
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
@@ -49,6 +50,8 @@ export interface Round {
   guessStartedAt: number | null;
   revealStartedAt: number | null;
   answers: Record<string, Answer>;
+  /** How many times the clip plays; the window is that many GUESS_MS. Absent in rounds from before formats: once. */
+  plays?: number;
 }
 
 export interface RoomState {
@@ -77,6 +80,8 @@ export interface RoomState {
   audioChecked?: boolean;
   /** Where the songs come from. Absent in rooms older than setlist modes: Classic. */
   setlist?: Setlist;
+  /** How many rounds of each kind, and plays per song. Absent in rooms older than formats: the default. */
+  format?: GameFormat;
   createdAt: number;
 }
 
@@ -99,7 +104,9 @@ export type Action =
   /** The host's setlist mode and picks, between games. */
   | { type: 'setlist'; mode: SetlistMode; taste: Taste }
   /** A player's picks for Crowd picks, between games. */
-  | { type: 'taste'; playerId: string; taste: Taste };
+  | { type: 'taste'; playerId: string; taste: Taste }
+  /** The host's game format, between games. */
+  | { type: 'format'; format: GameFormat };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
 
@@ -126,6 +133,12 @@ export interface RoundView {
   kind: QuestionKind;
   /** True on the first round of each kind: the screens announce the new question. */
   kindChanged: boolean;
+  /** Every round's kind in this game, in order, for the progress pips and the announcements. */
+  kinds: QuestionKind[];
+  /** The guessing window: GUESS_MS for each play of the clip. */
+  guessMs: number;
+  /** How many times the clip plays in that window. */
+  plays: number;
   guessStartedAt: number | null;
   revealStartedAt: number | null;
   /** Host only: what to play. A preview URL does not name the song. */
@@ -158,6 +171,8 @@ export interface RoomView {
     /** Host only, in Crowd picks: what each player still in the room has picked, by id. */
     picks?: Record<string, Taste>;
   };
+  /** The room's format: the running game's, or between games the next one's. */
+  format: GameFormat;
   /** Players only. */
   you?: {
     id: string;

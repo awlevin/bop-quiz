@@ -2,9 +2,13 @@ import { GUESS_MS, MAX_POINTS, MIN_POINTS } from './config';
 import { matchesArtist, matchesText, parseYear } from './match';
 import type { Answer, QuestionKind, Song } from './types';
 
-/** A right answer is worth MAX_POINTS at 0 s, falling evenly to MIN_POINTS at the buzzer. */
-export function speedPoints(elapsedMs: number): number {
-  const t = Math.min(Math.max(elapsedMs / GUESS_MS, 0), 1);
+/**
+ * A right answer is worth MAX_POINTS at 0 s, falling evenly to MIN_POINTS at
+ * the buzzer. When the song plays more than once the fall spans every play,
+ * so waiting for the replay costs points.
+ */
+export function speedPoints(elapsedMs: number, guessMs: number = GUESS_MS): number {
+  const t = Math.min(Math.max(elapsedMs / guessMs, 0), 1);
   return Math.round(MAX_POINTS - (MAX_POINTS - MIN_POINTS) * t);
 }
 
@@ -21,7 +25,13 @@ export function yearShare(yearsOff: number): number {
   return share < YEAR_FLOOR ? 0 : share;
 }
 
-export function grade(kind: QuestionKind, song: Song, text: string, elapsedMs: number): Answer {
+export function grade(
+  kind: QuestionKind,
+  song: Song,
+  text: string,
+  elapsedMs: number,
+  guessMs: number = GUESS_MS,
+): Answer {
   const base: Answer = { text, elapsedMs, correct: false, points: 0 };
 
   if (kind === 'year') {
@@ -33,11 +43,11 @@ export function grade(kind: QuestionKind, song: Song, text: string, elapsedMs: n
       ...base,
       yearsOff,
       correct: yearsOff === 0,
-      points: Math.round(speedPoints(elapsedMs) * share),
+      points: Math.round(speedPoints(elapsedMs, guessMs) * share),
     };
   }
 
   const correct =
     kind === 'artist' ? matchesArtist(text, song.artist) : matchesText(text, song[kind]);
-  return { ...base, correct, points: correct ? speedPoints(elapsedMs) : 0 };
+  return { ...base, correct, points: correct ? speedPoints(elapsedMs, guessMs) : 0 };
 }

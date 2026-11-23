@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { chooseFinales, chooseSongs } from '@/lib/catalog';
 import { createSoloRoom } from '@/lib/solo/local';
 
-import { ANSWER_GRACE_MS, GUESS_MS, REVEAL_MS, ROUNDS_PER_GAME } from './config';
+import { ANSWER_GRACE_MS, GUESS_MS, REVEAL_MS, ROUND_KINDS, ROUNDS_PER_GAME } from './config';
+import { phaseDeadline } from './deadline';
+import type { GameFormat } from './format';
 import { matchesArtist, matchesText, parseYear } from './match';
 import { createRoom, reduce } from './reducer';
 import { grade, speedPoints, yearShare } from './score';
@@ -362,6 +364,140 @@ describe('ending a game', () => {
     state = run(state, { type: 'answer', playerId: 'p0', text: 'song 501' }, 9300);
     expect(state.rounds[0].answers.p0.correct).toBe(true);
     expect(state.playedSongIds).toEqual([1, 2, 3, ...fresh.map((s) => s.id)]);
+  });
+});
+
+describe('game format', () => {
+  const TWELVE: GameFormat = { counts: { title: 4, artist: 4, year: 2, album: 2 }, plays: 1 };
+  const many = (n: number) => Array.from({ length: n }, (_, i) => song(i + 1));
+
+  function startWith(format: GameFormat, names = ['Ana'], songs = many(30)): RoomState {
+    let state = run(lobbyWith(names), { type: 'format', format }, 0);
+    state = run(state, { type: 'start', songs, spares: SPARES }, 500);
+    return state;
+  }
+
+  it('starts a fresh room in the default format', () => {
+    const state = lobbyWith(['Ana']);
+    expect(viewFor(state, { role: 'host' }, 0).format).toEqual({
+      counts: { title: 3, artist: 3, year: 2, album: 2 },
+      plays: 1,
+    });
+  });
+
+  it('lays out the rounds the room asked for, easiest first', () => {
+    const state = startWith(TWELVE);
+    expect(state.rounds.map((r) => r.kind)).toEqual([
+      ...Array(4).fill('title'),
+      ...Array(4).fill('artist'),
+      'year',
+      'year',
+      'album',
+      'album',
+    ]);
+    // Only the songs that became rounds count as heard.
+    expect(state.playedSongIds).toEqual(many(12).map((s) => s.id));
+    const view = viewFor(state, { role: 'player', playerId: 'p0' }, 500);
+    expect(view.round).toMatchObject({
+      total: 12,
+      kinds: state.rounds.map((r) => r.kind),
+      plays: 1,
+      guessMs: GUESS_MS,
+    });
+  });
+
+  it('skips a kind with no rounds, and announces each kind that is played', () => {
+    let state = startWith({ counts: { title: 1, artist: 0, year: 0, album: 2 }, plays: 1 });
+    expect(state.rounds.map((r) => r.kind)).toEqual(['title', 'album', 'album']);
+    const changed: boolean[] = [];
+    for (let i = 0; i < 3; i++) {
+      changed.push(viewFor(state, { role: 'host' }, 0).round!.kindChanged);
+      state = run(state, { type: 'audio-started', roundIndex: i }, 1000 * (i + 1));
+      state = run(state, { type: 'give-up', playerId: 'p0' }, 1000 * (i + 1) + 10);
+      state = run(state, { type: 'next', roundIndex: i }, 1000 * (i + 1) + 20);
+    }
+    expect(changed).toEqual([true, true, false]);
+    expect(state.phase).toBe('finished');
+  });
+
+  it('wants a song for every round before it starts', () => {
+    const state = run(lobbyWith(['Ana']), { type: 'format', format: TWELVE }, 0);
+    expect(reduce(state, { type: 'start', songs: many(11), spares: SPARES }, 10)).toEqual({
+      ok: false,
+      error: 'Not enough songs to start.',
+    });
+    const two: GameFormat = { counts: { title: 2, artist: 0, year: 0, album: 0 }, plays: 1 };
+    const short = run(lobbyWith(['Ana']), { type: 'format', format: two }, 0);
+    expect(run(short, { type: 'start', songs: many(2), spares: [] }, 10).rounds).toHaveLength(2);
+  });
+
+  it('gives a song played twice twice the window, deadline and all', () => {
+    let state = startWith({ ...TWELVE, plays: 2 }, ['Ana', 'Ben']);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    const view = viewFor(state, { role: 'host' }, 1000);
+    expect(view.round).toMatchObject({ plays: 2, guessMs: 2 * GUESS_MS });
+    expect(phaseDeadline(view)).toBe(1000 + 2 * GUESS_MS + ANSWER_GRACE_MS);
+
+    // Still open after the first play is over.
+    expect(run(state, { type: 'tick' }, 1000 + GUESS_MS + ANSWER_GRACE_MS + 1)).toBe(state);
+    const timedOut = run(state, { type: 'tick' }, 1000 + 2 * GUESS_MS + ANSWER_GRACE_MS);
+    expect(timedOut.phase).toBe('reveal');
+    expect(timedOut.rounds[0].revealStartedAt).toBe(1000 + 2 * GUESS_MS);
+  });
+
+  it('scores speed across every play, so waiting for the replay costs points', () => {
+    let state = startWith({ ...TWELVE, plays: 2 }, ['Ana', 'Ben', 'Cy']);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    // Ana at the end of the first play, halfway through the window: 750, not the buzzer's 500.
+    state = run(state, { type: 'answer', playerId: 'p0', text: 'song 1' }, 1000 + GUESS_MS);
+    expect(state.rounds[0].answers.p0).toMatchObject({ correct: true, points: 750, elapsedMs: GUESS_MS });
+    // Ben during the replay, near the buzzer, and Cy taps out after it would have ended once.
+    state = run(state, { type: 'give-up', playerId: 'p2' }, 1000 + GUESS_MS + 5000);
+    expect(state.rounds[0].answers.p2.elapsedMs).toBe(GUESS_MS + 5000);
+    state = run(state, { type: 'answer', playerId: 'p1', text: 'song 1' }, 1000 + 2 * GUESS_MS);
+    expect(state.rounds[0].answers.p1.points).toBe(500);
+    expect(state.phase).toBe('reveal');
+  });
+
+  it('only changes between games', () => {
+    const playing = guessing(['Ana']);
+    expect(reduce(playing, { type: 'format', format: TWELVE }, 2000)).toEqual({
+      ok: false,
+      error: 'The game is already running.',
+    });
+    // A running game keeps the window its rounds were laid out with.
+    const twice = startWith({ ...TWELVE, plays: 2 });
+    expect(twice.rounds.every((r) => r.plays === 2)).toBe(true);
+    expect(run(lobbyWith(['Ana']), { type: 'format', format: TWELVE }, 0).format).toEqual(TWELVE);
+  });
+
+  it('keeps the format through the end of a game and back to the lobby', () => {
+    let state = startWith(TWELVE, ['Ana']);
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    state = run(state, { type: 'pause', by: 'Ana' }, 1100);
+    state = run(state, { type: 'end-game', playerId: null }, 1200);
+    expect(state.format).toEqual(TWELVE);
+  });
+
+  it('plays a room from before formats, and a game from before them, as it always did', () => {
+    const legacy: RoomState = { ...lobbyWith(['Ana']) };
+    delete legacy.format;
+    expect(viewFor(legacy, { role: 'host' }, 0).format.counts.title).toBe(3);
+    let state = run(legacy, { type: 'start', songs: SONGS, spares: SPARES }, 0);
+    expect(state.rounds.map((r) => r.kind)).toEqual(ROUND_KINDS);
+
+    // Rounds stored without a window, mid-game when the code changed.
+    state = {
+      ...state,
+      rounds: state.rounds.map((r) => {
+        const old = { ...r };
+        delete old.plays;
+        return old;
+      }),
+    };
+    state = run(state, { type: 'audio-started', roundIndex: 0 }, 1000);
+    expect(viewFor(state, { role: 'host' }, 1000).round).toMatchObject({ plays: 1, guessMs: GUESS_MS });
+    expect(run(state, { type: 'tick' }, 1000 + GUESS_MS + ANSWER_GRACE_MS).phase).toBe('reveal');
   });
 });
 
