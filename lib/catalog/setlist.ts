@@ -73,7 +73,7 @@ function pick<T>(items: readonly T[], weights: readonly number[], random: () => 
  * used, so the caller fills any gap from songs the room has heard.
  *
  * `songs` is the whole playable catalog, for working out genre families.
- * The game's rounds come back shuffled, so nobody's songs bunch up at one
+ * The game's `rounds` come back shuffled, so nobody's songs bunch up at one
  * end; anything past them (the spares) follows in draw order.
  */
 export function drawForTastes(
@@ -82,6 +82,7 @@ export function drawForTastes(
   fresh: readonly Song[],
   random: () => number = Math.random,
   songs: readonly Song[] = fresh,
+  rounds: number = ROUNDS_PER_GAME,
 ): Song[] {
   const familyOf = familyResolver(songs);
   const distances = new Map(
@@ -114,6 +115,6 @@ export function drawForTastes(
     for (const i of takers) shares[i] += 1 / takers.length;
   }
 
-  const rounds = Math.min(picked.length, ROUNDS_PER_GAME);
-  return [...shuffle(picked.slice(0, rounds), random), ...picked.slice(rounds)];
+  const game = Math.min(picked.length, rounds);
+  return [...shuffle(picked.slice(0, game), random), ...picked.slice(game)];
 }

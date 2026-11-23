@@ -8,6 +8,8 @@
 
 <p align="center">
   <a href="https://bop-quiz.vercel.app"><b>Play it → bop-quiz.vercel.app</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://bop-quiz.vercel.app/changelog">what’s new</a>
 </p>
 
 Open it on the television. Everyone else scans the code on the screen and
@@ -31,7 +33,7 @@ plays from where they are sitting. Nothing to install, no accounts.
 3. **Fifteen seconds of a song play.** The record spins, the timer ring runs
    down, and every phone asks one question. The first three rounds want the
    **title**, then three want the **artist**, two want the **year**, and the
-   last two want the **album**.
+   last two want the **album**. The host can change that mix; see below.
 4. **Type it and lock it in.** A right answer is worth 1000 points at the
    first second and 500 at the buzzer, so speed is most of the game. Matching
    is forgiving: typos, a missing apostrophe, a dropped "The" and the
@@ -41,10 +43,14 @@ plays from where they are sitting. Nothing to install, no accounts.
    rounds, then the final scores with a song to see them out.
 
 Nobody knows it? Hit **Give up** to tap out of the round. A white flag drops
-onto the television, and you are betting the song is a **stumper**: if
-nobody who stayed in scores on it, you get 300 points. If anyone does, you
-get nothing. Until the round ends your phone becomes a heckle pad: tomatoes,
-air horns and slow claps float up over the record on the big screen.
+onto the television, and a slim "Ben gave up" banner slides across the top of
+everyone else's phone for a moment. To keep it to the television alone, turn
+off **Give-ups on every phone** in the host's settings menu.
+
+Giving up is also a bet that the song is a **stumper**: if nobody who stayed
+in scores on it, you get 300 points. If anyone does, you get nothing. Until
+the round ends your phone becomes a heckle pad: tomatoes, air horns and slow
+claps float up over the record on the big screen.
 
 **Ride along** is a house rule in the TV's settings, off by default. With it
 on, giving up asks whether to call a stumper or to back a player who is still
@@ -74,8 +80,23 @@ asked for come up more often, and each person gets their share, so the lone
 soul fan is not drowned out by a room of pop fans. In *Host picks* the
 television picks for everyone. A pick too narrow for a whole game is filled
 with the closest songs: the same genre a decade out, then the same decade in
-another genre. [/shuffle](https://bop-quiz.vercel.app/shuffle) previews each
-mode with a few made-up picks.
+another genre. *Difficulty* draws from the best-known songs of every decade
+since the '60s: the top 10 of each on **Easy**, 20 on **Medium**, 30 on
+**Hard**, or any number the host types under *Custom*. The ranking is
+`data/decade-ranks.json`. A room that has heard every song in its pool gets
+the next-best-known songs rather than repeats.
+[/shuffle](https://bop-quiz.vercel.app/shuffle) previews each mode with a few
+made-up picks.
+
+### Changing the rounds (experimental)
+
+Next to it, **Rounds** sets how many songs ask for the title, the artist,
+the year and the album, up to ten of each, still easiest first, and how many
+times each song plays. Played twice, a round's fifteen seconds run, dip, and
+start over from the same spot, and the answer stays open for all thirty: the
+points fall across the whole window, so waiting for the replay costs you. The
+lobby says so when a game is not the usual ten songs heard once. It works with
+every setlist mode, and quick play keeps the usual ten.
 
 <p align="center">
   <img src="assets/screenshots/tv-guessing.png" alt="The television during a round: a spinning record, a countdown, and who has locked in" width="900">
@@ -186,6 +207,14 @@ Every phone carries a *Send feedback* link, and the reveal has a shortcut for
 report gets a public id like `FB-12` and a status, and anyone can read the
 queue at [/feedback](https://bop-quiz.vercel.app/feedback) to see
 what was fixed, what was declined, and why.
+
+## Changelog
+
+What players see change is written up at
+[/changelog](https://bop-quiz.vercel.app/changelog), newest first. It is one
+markdown file, `content/changelog.md`: add an entry in the same commit as any
+change a player would notice, and leave internal work out. `AGENTS.md` has
+the rules, and `npm test` checks the file's shape.
 
 ## Credits
 

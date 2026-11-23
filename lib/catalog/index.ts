@@ -7,9 +7,11 @@ import catalog from '@/data/catalog.json';
 import finales from '@/data/finales.json';
 import lobby from '@/data/lobby.json';
 import { benchedSongIds } from '@/lib/feedback/store';
+import { ROUNDS_PER_GAME } from '@/lib/game/config';
 import type { GenreFamily, Taste } from '@/lib/game/setlist';
 import type { Song } from '@/lib/game/types';
 
+import { hitsPool } from './hits';
 import { refreshPreviews } from './itunes';
 import { drawForTastes, familyResolver } from './setlist';
 import { primaryArtist, shuffle } from './util';
@@ -24,7 +26,8 @@ const FINALES = finales as Song[];
  * first. `excludeIds` is oldest first.
  *
  * With `tastes` (Crowd picks or Host picks), the unheard songs are drawn for
- * those tastes, closest first (`drawForTastes`); without, at random.
+ * those tastes, closest first (`drawForTastes`); without, at random. The
+ * first `rounds` songs are the game's, the rest its spares.
  */
 export function chooseSongs(
   count: number,
@@ -32,6 +35,7 @@ export function chooseSongs(
   random: () => number = Math.random,
   songs: readonly Song[] = SONGS,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
 ): Song[] {
   const exclude = new Set(excludeIds);
   const fresh = shuffle(
@@ -43,7 +47,7 @@ export function chooseSongs(
     .filter((s) => exclude.has(s.id))
     .sort((a, b) => lastHeard.get(a.id)! - lastHeard.get(b.id)!);
 
-  const picked = tastes.length ? drawForTastes(tastes, count, fresh, random, songs) : [];
+  const picked = tastes.length ? drawForTastes(tastes, count, fresh, random, songs, rounds) : [];
   const taken = new Set(picked.map((s) => s.id));
   const artists = new Set(picked.map((s) => primaryArtist(s.artist)));
   const leftovers: Song[] = [];
@@ -65,17 +69,25 @@ export function chooseSongs(
  * Songs for one game and the finale, exactly as a room draws them, but with
  * the preview URLs still as stored. The shuffle preview page uses this to
  * show what a game would have played without a trip to iTunes.
+ *
+ * With `depth` (Difficulty mode), only the top `depth` songs of each decade
+ * are drawn from (`hitsPool`).
  */
 export async function drawSongs(
   count: number,
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
+  depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
   // Songs someone has reported sit out until the report is closed.
   const benched = new Set(await benchedSongIds().catch(() => []));
   const playable = SONGS.filter((s) => !benched.has(s.id));
-  const songs = chooseSongs(count, excludeIds, Math.random, playable, tastes);
+  const hits = depth === null ? playable : hitsPool(playable, depth, excludeIds, count);
+  // A pool too small for a game at all (no rankings) falls back to everything.
+  const pool = hits.length >= count ? hits : playable;
+  const songs = chooseSongs(count, excludeIds, Math.random, pool, tastes, rounds);
   return { songs, finales: chooseFinales(songs, lastFinaleId) };
 }
 
@@ -85,8 +97,10 @@ export async function pickSongs(
   excludeIds: readonly number[],
   lastFinaleId?: number,
   tastes: readonly Taste[] = [],
+  rounds: number = ROUNDS_PER_GAME,
+  depth: number | null = null,
 ): Promise<{ songs: Song[]; finales: Song[] }> {
-  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes);
+  const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes, rounds, depth);
   const fresh = await refreshPreviews([...songs, ...finales]);
   return { songs: fresh.slice(0, songs.length), finales: fresh.slice(songs.length) };
 }

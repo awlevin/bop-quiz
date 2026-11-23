@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getJukebox, type Jukebox } from '@/lib/client/jukebox';
-import { REVEAL_MS } from '@/lib/game/config';
+import { GUESS_MS, REVEAL_MS } from '@/lib/game/config';
 import type { RoomView } from '@/lib/game/types';
 
 /** Time on the "get ready" card before the music starts, so the room can read the question. */
@@ -22,6 +22,8 @@ const REVEAL_FADE_GAP = 0.6;
 const FADE_OUT = 2;
 const LOBBY_FADE = 1.5;
 const FINALE_CROSSFADE = 3;
+/** Seconds each way of the dip when a song played more than once starts over. */
+const REPLAY_DIP = 0.35;
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -39,10 +41,21 @@ export interface Director {
 }
 
 /**
+ * When the clip the room is hearing last started over, on the server clock: at
+ * each GUESS_MS boundary of the window while the round was still guessing,
+ * and never past the last play.
+ */
+function lastRestart(guessStartedAt: number, plays: number, until: number): number {
+  const restarts = Math.min(Math.floor(Math.max(until - guessStartedAt, 0) / GUESS_MS), plays - 1);
+  return guessStartedAt + restarts * GUESS_MS;
+}
+
+/**
  * Keeps the jukebox in step with the room. Between songs it fades the old one
  * out while the next loads on the other deck, swings the needle in, and only
  * when sound is actually out tells the room the round has begun, so the 15
- * seconds start when the room can hear music.
+ * seconds start when the room can hear music. A round that plays its clip
+ * more than once starts it over every 15 seconds.
  *
  * `report` is how it tells the room: the host screen posts to the server, a
  * solo game reduces in place. Null while this screen has no say in the room.
@@ -60,6 +73,8 @@ export function useDirector(
   const [dropped, setDropped] = useState('');
   /** What the jukebox was last pointed at, so each thing is cued once. */
   const cued = useRef('');
+  /** The replays already made, by round and play, so a re-render cannot restart a song twice. */
+  const replayed = useRef(new Set<string>());
 
   useEffect(() => () => jukebox?.stop(), [jukebox]);
 
@@ -75,6 +90,7 @@ export function useDirector(
   const nextPreviewUrl = view?.round?.nextPreviewUrl;
   const guessStartedAt = view?.round?.guessStartedAt ?? null;
   const revealStartedAt = view?.round?.revealStartedAt ?? null;
+  const plays = view?.round?.plays ?? 1;
   const finaleUrls = view?.finaleUrls;
   const finaleKey = finaleUrls?.join('|') ?? '';
   const lobbyUrl = view?.lobbyUrl;
@@ -102,6 +118,25 @@ export function useDirector(
     const timer = setTimeout(() => void jukebox.fadeOut(REVEAL_FADE), Math.max(fadeAfter, 0));
     return () => clearTimeout(timer);
   }, [jukebox, unlocked, paused, phase, roundKey, revealStartedAt, clockOffset]);
+
+  // Played more than once: back to the top of the clip at each boundary of the
+  // window. A pause shifts guessStartedAt on resume, which re-arms this.
+  useEffect(() => {
+    if (!jukebox || !unlocked || paused || phase !== 'guessing' || guessStartedAt === null || plays < 2) return;
+    const elapsed = Date.now() + clockOffset - guessStartedAt;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let play = 2; play <= plays; play++) {
+      const key = `${roundKey}:${play}`;
+      const boundary = (play - 1) * GUESS_MS;
+      if (replayed.current.has(key) || elapsed >= boundary) continue;
+      const fire = () => {
+        replayed.current.add(key);
+        void jukebox.replay(0, REPLAY_DIP);
+      };
+      timers.push(setTimeout(fire, Math.max(boundary - elapsed - REPLAY_DIP * 1000, 0)));
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [jukebox, unlocked, paused, phase, roundKey, guessStartedAt, plays, clockOffset]);
 
   useEffect(() => {
     if (!jukebox || !report || phase === undefined || !unlocked) return;
@@ -146,6 +181,8 @@ export function useDirector(
     (async () => {
       try {
         if (phase === 'loading') {
+          // Replays count afresh: a game ended early can hand this song the same slot again.
+          replayed.current.clear();
           // The old song leaves while the new one loads on the other deck.
           void jukebox.fadeOut(FADE_OUT);
           await Promise.all([jukebox.cue(previewUrl), wait(introMs - NEEDLE_MS)]);
@@ -160,7 +197,9 @@ export function useDirector(
           // The host page was reloaded mid-song: rejoin it where it should be.
           await jukebox.cue(previewUrl);
           if (!current()) return;
-          const offset = guessStartedAt ? (Date.now() + clockOffset - guessStartedAt) / 1000 : 0;
+          const now = Date.now() + clockOffset;
+          const from = guessStartedAt ? lastRestart(guessStartedAt, plays, Math.min(now, revealStartedAt ?? now)) : now;
+          const offset = (now - from) / 1000;
           await jukebox.start({ offset: Math.max(offset, 0), fadeIn: FADE_IN });
         }
       } catch (error) {
@@ -173,7 +212,7 @@ export function useDirector(
         }
       }
     })();
-    // guessStartedAt, clockOffset, introMs and finaleUrls are read once, when the thing is cued.
+    // guessStartedAt, revealStartedAt, plays, clockOffset, introMs and finaleUrls are read once, when the thing is cued.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jukebox, report, phase, roundKey, nextPreviewUrl, finaleKey, lobbyUrl, lobbyMusic, unlocked]);
 

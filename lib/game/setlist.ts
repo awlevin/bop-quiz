@@ -2,17 +2,50 @@
 //
 // Classic draws from the whole catalog. Crowd picks lets each player choose
 // the genres and decades they like, on their phone, and draws from everyone's
-// picks together. Host picks lets the TV choose for the room. The picks live
+// picks together. Host picks lets the TV choose for the room. Difficulty
+// draws from the best-known songs of every decade: the top 10 of each on
+// Easy, 20 on Medium, 30 on Hard, or any number the host types. The picks live
 // in the room so that whoever presses Start, TV or phone, gets the same draw.
 // The draw itself is `chooseSongs` in lib/catalog.
 
-export type SetlistMode = 'classic' | 'crowd' | 'host';
+export type SetlistMode = 'classic' | 'crowd' | 'host' | 'hits';
 
 export const SETLIST_MODES: readonly { id: SetlistMode; label: string; hint: string }[] = [
   { id: 'classic', label: 'Classic', hint: 'Songs from the whole catalog.' },
   { id: 'crowd', label: 'Crowd picks', hint: 'Each phone picks genres and decades.' },
   { id: 'host', label: 'Host picks', hint: 'This screen picks genres and decades.' },
+  { id: 'hits', label: 'Difficulty', hint: 'Easy, Medium or Hard: the top hits of every decade.' },
 ];
+
+/**
+ * Difficulty presets: how many of each decade's best-known songs the game
+ * draws from. The host can type any other number between MIN_DEPTH and
+ * MAX_DEPTH instead. Rankings live in data/decade-ranks.json.
+ */
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export const DIFFICULTIES: readonly { id: Difficulty; label: string; depth: number }[] = [
+  { id: 'easy', label: 'Easy', depth: 10 },
+  { id: 'medium', label: 'Medium', depth: 20 },
+  { id: 'hard', label: 'Hard', depth: 30 },
+];
+
+export const MIN_DEPTH = 1;
+/** More than any decade holds: the whole catalog. */
+export const MAX_DEPTH = 50;
+export const DEFAULT_DEPTH = DIFFICULTIES[0].depth;
+
+/** The preset a depth matches, or null for a custom number. */
+export function difficultyOf(depth: number): Difficulty | null {
+  return DIFFICULTIES.find((d) => d.depth === depth)?.id ?? null;
+}
+
+/** A depth from untrusted input: a whole number, clamped into range. Null when it is not a number at all. */
+export function cleanDepth(raw: unknown): number | null {
+  const n = typeof raw === 'string' && raw.trim() !== '' ? Number(raw) : raw;
+  if (typeof n !== 'number' || !Number.isFinite(n)) return null;
+  return Math.min(Math.max(Math.round(n), MIN_DEPTH), MAX_DEPTH);
+}
 
 /** Broad families over the iTunes genre names, which are too fine to pick from. */
 export type GenreFamily = 'pop' | 'rock' | 'rnb' | 'hiphop' | 'alt';
@@ -41,6 +74,8 @@ export interface Setlist {
   host: Taste;
   /** Each player's picks, by player id, used in crowd mode. */
   picks: Record<string, Taste>;
+  /** Difficulty mode: how many of each decade's top songs to draw from. Absent: DEFAULT_DEPTH. */
+  depth?: number;
 }
 
 export const CLASSIC: Setlist = { mode: 'classic', host: NO_TASTE, picks: {} };
@@ -135,6 +170,11 @@ export function tastesFor(setlist: Setlist | undefined, playerIds: readonly stri
     });
   }
   return [];
+}
+
+/** How deep into each decade's hits a draw goes: a number in Difficulty mode, null otherwise. */
+export function depthFor(setlist: Setlist | undefined): number | null {
+  return setlist?.mode === 'hits' ? (setlist.depth ?? DEFAULT_DEPTH) : null;
 }
 
 /** How many of `tastes` asked for each genre and each decade, most asked first. */

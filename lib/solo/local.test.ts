@@ -6,7 +6,7 @@ import { reduce } from '@/lib/game/reducer';
 import type { Action, RoomState, Song } from '@/lib/game/types';
 import { viewFor } from '@/lib/game/views';
 
-import { createSoloRoom, PERFECT_SCORE, recordGame, SOLO_PLAYER_ID, tierFor } from './local';
+import { createSoloRoom, perfectScore, recordGame, SOLO_PLAYER_ID, tierFor } from './local';
 
 function song(id: number): Song {
   return {
@@ -74,9 +74,15 @@ describe('quick play', () => {
 
   it('ranks a score from podcast person to walking jukebox', () => {
     expect(tierFor(0).title).toBe('More of a podcast person');
-    expect(tierFor(PERFECT_SCORE).title).toBe('Walking jukebox');
+    expect(tierFor(perfectScore()).title).toBe('Walking jukebox');
     const titles = [0, 2000, 4000, 6000, 8000, 10000].map((s) => tierFor(s).title);
     expect(new Set(titles).size).toBe(titles.length);
+  });
+
+  it('measures a score against the length of the game it came from', () => {
+    expect(perfectScore(4)).toBe(4000);
+    expect(tierFor(3800, 4).title).toBe('Walking jukebox');
+    expect(tierFor(3800).title).toBe('Casual listener');
   });
 
   it('keeps the best score and counts every game', () => {

@@ -24,7 +24,7 @@ import { heard, soloGame } from '@/lib/client/storage';
 import { useLinerNote } from '@/lib/client/useLinerNote';
 import { useLocalRoom } from '@/lib/client/useLocalRoom';
 import { useServerNow } from '@/lib/client/useNow';
-import { GUESS_MS, MAX_ANSWER_LENGTH, REVEAL_MS, ROUND_KINDS } from '@/lib/game/config';
+import { MAX_ANSWER_LENGTH, REVEAL_MS } from '@/lib/game/config';
 import { KINDS } from '@/lib/game/kinds';
 import type { Action, QuestionKind, ReduceResult, RevealedAnswer, RoomState, RoomView } from '@/lib/game/types';
 import {
@@ -165,7 +165,7 @@ function SoloGame() {
       )}
 
       <AnimatePresence>
-        {announcing && view.round && <Chapter key={view.round.kind} kind={view.round.kind} />}
+        {announcing && view.round && <Chapter key={view.round.kind} kind={view.round.kind} kinds={view.round.kinds} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -259,9 +259,9 @@ function Countdown({ endsAt, frozenAt }: ClockProps & { endsAt: number }) {
   );
 }
 
-function TimerRing({ startedAt, frozenAt }: ClockProps & { startedAt: number }) {
+function TimerRing({ startedAt, guessMs, frozenAt }: ClockProps & { startedAt: number; guessMs: number }) {
   const now = useServerNow(0, true, frozenAt);
-  const progress = Math.min(Math.max((now - startedAt) / GUESS_MS, 0), 1);
+  const progress = Math.min(Math.max((now - startedAt) / guessMs, 0), 1);
   return (
     <svg className={styles.ring} viewBox="0 0 100 100" aria-hidden>
       <circle cx="50" cy="50" r="48.5" className={styles.ringTrack} />
@@ -303,7 +303,7 @@ function Round({
   return (
     <div className={styles.round}>
       <ol className={styles.pips} aria-label={`Song ${round.index + 1} of ${round.total}`}>
-        {ROUND_KINDS.map((kind, i) => (
+        {round.kinds.map((kind, i) => (
           <li
             key={i}
             data-tone={kind}
@@ -316,7 +316,7 @@ function Round({
         <div className={styles.halo}>
           <Halo jukebox={director.jukebox} active />
         </div>
-        {guessing && <TimerRing startedAt={round.guessStartedAt!} frozenAt={frozenAt} />}
+        {guessing && <TimerRing startedAt={round.guessStartedAt!} guessMs={round.guessMs} frozenAt={frozenAt} />}
         <VinylRecord
           spinning={director.needleDown || Boolean(view.pause)}
           artworkUrl={song?.artworkUrl}
@@ -326,7 +326,7 @@ function Round({
         </VinylRecord>
         {guessing && (
           <div className={styles.clock}>
-            <Countdown endsAt={round.guessStartedAt! + GUESS_MS} frozenAt={frozenAt} />
+            <Countdown endsAt={round.guessStartedAt! + round.guessMs} frozenAt={frozenAt} />
           </div>
         )}
       </div>
@@ -482,7 +482,7 @@ function Finished({
   onAgain: () => void;
 }) {
   const score = state.players[0]?.score ?? 0;
-  const tier = tierFor(score);
+  const tier = tierFor(score, state.rounds.length);
   return (
     <div className={styles.finished}>
       {fresh && <Confetti />}
@@ -543,9 +543,9 @@ function Finished({
 // ---------------------------------------------------------------------------
 
 /** Full-screen announcement when the question changes: "Now name the artist". */
-function Chapter({ kind }: { kind: QuestionKind }) {
-  const first = ROUND_KINDS.indexOf(kind) + 1;
-  const last = ROUND_KINDS.lastIndexOf(kind) + 1;
+function Chapter({ kind, kinds }: { kind: QuestionKind; kinds: QuestionKind[] }) {
+  const first = kinds.indexOf(kind) + 1;
+  const last = kinds.lastIndexOf(kind) + 1;
   return (
     <motion.div
       className={styles.chapter}
@@ -555,9 +555,7 @@ function Chapter({ kind }: { kind: QuestionKind }) {
       exit={{ clipPath: 'circle(0% at 50% 50%)' }}
       transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
     >
-      <p className={styles.chapterEyebrow}>
-        Songs {first} to {last}
-      </p>
+      <p className={styles.chapterEyebrow}>{first === last ? `Song ${first}` : `Songs ${first} to ${last}`}</p>
       <h1 className={styles.chapterTitle}>
         {first === 1 ? 'Name the' : 'Now name the'} <em>{KINDS[kind].noun}</em>
       </h1>

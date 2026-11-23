@@ -4,6 +4,8 @@
 // never see it: they get a RoomView, built per recipient by `views.ts`, which
 // holds back the answer until the reveal.
 
+import type { GiveUpNotice } from './giveUpNotice';
+import type { GameFormat } from './format';
 import type { Setlist, SetlistMode, Taste } from './setlist';
 
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
@@ -67,6 +69,8 @@ export interface Round {
   answers: Record<string, Answer>;
   /** What the folded players threw while the song played. Absent before the first. */
   heckles?: Heckle[];
+  /** How many times the clip plays; the window is that many GUESS_MS. Absent in rounds from before formats: once. */
+  plays?: number;
 }
 
 export interface RoomState {
@@ -97,6 +101,10 @@ export interface RoomState {
   setlist?: Setlist;
   /** House rule: folding can back another player instead of calling a stumper. Absent is off. */
   rideAlong?: boolean;
+  /** Where give-ups are announced. Absent in rooms older than the setting: everyone's phones. */
+  giveUpNotice?: GiveUpNotice;
+  /** How many rounds of each kind, and plays per song. Absent in rooms older than formats: the default. */
+  format?: GameFormat;
   createdAt: number;
 }
 
@@ -121,9 +129,13 @@ export type Action =
   | { type: 'end-game'; playerId: string | null }
   | { type: 'tick' }
   /** The host's setlist mode and picks, between games. */
-  | { type: 'setlist'; mode: SetlistMode; taste: Taste }
+  | { type: 'setlist'; mode: SetlistMode; taste: Taste; depth?: number }
   /** A player's picks for Crowd picks, between games. */
-  | { type: 'taste'; playerId: string; taste: Taste };
+  | { type: 'taste'; playerId: string; taste: Taste }
+  /** The host's choice of where give-ups are announced. Any time: it only changes who sees a banner. */
+  | { type: 'give-up-notice'; notice: GiveUpNotice }
+  /** The host's game format, between games. */
+  | { type: 'format'; format: GameFormat };
 
 export type ReduceResult = { ok: true; state: RoomState } | { ok: false; error: string };
 
@@ -152,6 +164,12 @@ export interface RoundView {
   kind: QuestionKind;
   /** True on the first round of each kind: the screens announce the new question. */
   kindChanged: boolean;
+  /** Every round's kind in this game, in order, for the progress pips and the announcements. */
+  kinds: QuestionKind[];
+  /** The guessing window: GUESS_MS for each play of the clip. */
+  guessMs: number;
+  /** How many times the clip plays in that window. */
+  plays: number;
   guessStartedAt: number | null;
   revealStartedAt: number | null;
   /** Host only: what to play. A preview URL does not name the song. */
@@ -187,7 +205,13 @@ export interface RoomView {
     host?: Taste;
     /** Host only, in Crowd picks: what each player still in the room has picked, by id. */
     picks?: Record<string, Taste>;
+    /** In Difficulty mode: how many of each decade's top songs the draw takes from. */
+    depth?: number;
   };
+  /** Where give-ups are announced: phones show other players' only with 'everyone'. */
+  giveUpNotice: GiveUpNotice;
+  /** The room's format: the running game's, or between games the next one's. */
+  format: GameFormat;
   /** Players only. */
   you?: {
     id: string;

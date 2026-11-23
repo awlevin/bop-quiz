@@ -2,7 +2,17 @@
 
 import { useSyncExternalStore } from 'react';
 
-import { cleanTaste, isSetlistMode, NO_TASTE, type SetlistMode, type Taste } from '@/lib/game/setlist';
+import { cleanFormat, DEFAULT_FORMAT, type GameFormat } from '@/lib/game/format';
+import { DEFAULT_GIVE_UP_NOTICE, type GiveUpNotice, isGiveUpNotice } from '@/lib/game/giveUpNotice';
+import {
+  cleanDepth,
+  cleanTaste,
+  DEFAULT_DEPTH,
+  isSetlistMode,
+  NO_TASTE,
+  type SetlistMode,
+  type Taste,
+} from '@/lib/game/setlist';
 
 // Host-screen preferences, kept in this browser.
 
@@ -12,12 +22,26 @@ export interface Settings {
   setlistMode: SetlistMode;
   /** What this screen picks in Host picks mode. */
   hostTaste: Taste;
+  /** Difficulty mode: how many of each decade's top songs to draw from (10 Easy, 20 Medium, 30 Hard). */
+  hitsDepth: number;
+  /** Where give-ups are announced: the TV and the other phones, or the TV alone. Copied into the room. */
+  giveUpNotice: GiveUpNotice;
+  /** Experimental: rounds of each kind and plays per song. Copied into the room like the setlist. */
+  format: GameFormat;
   /** House rule: a fold can back another player. The host screen copies it into the room. */
   rideAlong: boolean;
 }
 
 const KEY = 'mm:settings';
-const DEFAULTS: Settings = { lobbyMusic: true, setlistMode: 'classic', hostTaste: NO_TASTE, rideAlong: false };
+const DEFAULTS: Settings = {
+  lobbyMusic: true,
+  setlistMode: 'classic',
+  hostTaste: NO_TASTE,
+  hitsDepth: DEFAULT_DEPTH,
+  giveUpNotice: DEFAULT_GIVE_UP_NOTICE,
+  format: DEFAULT_FORMAT,
+  rideAlong: false,
+};
 
 /** Whatever was stored, with anything this version does not understand put back to the default. */
 function sanitize(stored: Partial<Settings>): Settings {
@@ -26,6 +50,9 @@ function sanitize(stored: Partial<Settings>): Settings {
     ...stored,
     setlistMode: isSetlistMode(stored.setlistMode) ? stored.setlistMode : DEFAULTS.setlistMode,
     hostTaste: cleanTaste(stored.hostTaste) ?? DEFAULTS.hostTaste,
+    hitsDepth: cleanDepth(stored.hitsDepth) ?? DEFAULTS.hitsDepth,
+    giveUpNotice: isGiveUpNotice(stored.giveUpNotice) ? stored.giveUpNotice : DEFAULTS.giveUpNotice,
+    format: cleanFormat(stored.format) ?? DEFAULTS.format,
     rideAlong: stored.rideAlong === true,
   };
 }

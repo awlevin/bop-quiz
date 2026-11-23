@@ -1,0 +1,171 @@
+/* Difficulty mode's picker: in the settings menu (paper) and the lobby (booth). */
+
+.difficulty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+
+.difficulty[data-tone='paper'] {
+  margin: 0.1em 0 0.35em 1.85em;
+  font-size: 0.9em;
+}
+
+.keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45em;
+}
+
+.key {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 5.2em;
+  padding: 0.4em 0.9em 0.35em;
+  border: 0.1em solid var(--booth-line);
+  border-radius: 0.6em;
+  background: transparent;
+  color: var(--chrome);
+  font-family: var(--font-strip), sans-serif;
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    color 160ms,
+    border-color 160ms,
+    transform 160ms var(--ease-spring);
+}
+
+.key small {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.key:hover {
+  border-color: var(--chrome);
+  color: var(--paper);
+}
+
+.key:active {
+  transform: translateY(0.08em) scale(0.97);
+}
+
+.key[aria-checked='true'] {
+  border-color: var(--paper);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0.2em 0 var(--paper-shade);
+}
+
+.custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45em;
+  color: var(--chrome);
+}
+
+.step {
+  width: 2em;
+  height: 2em;
+  border: 0.1em solid var(--booth-line);
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled) {
+  border-color: var(--chrome);
+  color: var(--paper);
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.number {
+  width: 3.4em;
+  padding: 0.25em 0.3em;
+  border: 0.1em solid var(--booth-line);
+  border-radius: 0.4em;
+  background: transparent;
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+
+.number::-webkit-inner-spin-button,
+.number::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.summary {
+  margin: 0;
+  color: var(--chrome);
+  font-size: 0.95em;
+}
+
+.summary b {
+  color: var(--paper);
+}
+
+/* --- On paper, in the settings menu -------------------------------------- */
+
+.difficulty[data-tone='paper'] .key,
+.difficulty[data-tone='paper'] .step,
+.difficulty[data-tone='paper'] .number {
+  border-color: var(--paper-shade);
+  color: var(--ink-soft);
+}
+
+.difficulty[data-tone='paper'] .key:hover,
+.difficulty[data-tone='paper'] .step:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+  color: var(--ink);
+}
+
+.difficulty[data-tone='paper'] .key[aria-checked='true'] {
+  border-color: var(--cherry);
+  background: var(--cherry);
+  color: var(--paper);
+  box-shadow: none;
+}
+
+.difficulty[data-tone='paper'] .number {
+  color: var(--ink);
+}
+
+.difficulty[data-tone='paper'] .custom,
+.difficulty[data-tone='paper'] .summary {
+  color: var(--ink-soft);
+}
+
+.difficulty[data-tone='paper'] .summary b {
+  color: var(--ink);
+}
+
+/* The settings menu is narrow: the four keys share one row. */
+.difficulty[data-tone='paper'] .keys {
+  flex-wrap: nowrap;
+}
+
+.difficulty[data-tone='paper'] .key {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 0.3em;
+}

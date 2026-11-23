@@ -1,0 +1,79 @@
+/* "Ben gave up" on the other phones: a slim paper pill along the top edge. */
+
+.stack {
+  position: fixed;
+  /* Centred on the header row (play.module.css .top), so it hides whole words, not half of them. */
+  top: calc(1.6rem + env(safe-area-inset-top));
+  left: 50%;
+  /* Over the page, under the pause screen. */
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  transform: translateX(-50%);
+  /* Taps go straight through to whatever is underneath. */
+  pointer-events: none;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 100%;
+  padding: 0.3rem 0.85rem 0.3rem 0.35rem;
+  border-radius: 99em;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 0.35rem 1rem rgb(0 0 0 / 0.4);
+  font-size: 0.9rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  animation: slideIn 280ms var(--ease-out) both;
+}
+
+.pill[data-leaving='true'] {
+  animation: slideOut 240ms ease-in both;
+}
+
+/* The round's colour, so it reads as part of this question. */
+.badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: var(--tone);
+  color: var(--tone-ink);
+}
+
+.badge svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text strong {
+  font-weight: 700;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% - 0.75rem));
+  }
+}
+
+@keyframes slideOut {
+  to {
+    opacity: 0;
+    transform: translateY(calc(-100% - 0.75rem));
+  }
+}

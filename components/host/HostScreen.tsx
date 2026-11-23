@@ -23,13 +23,16 @@ import { heard, hostTokens } from '@/lib/client/storage';
 import { useJoinUrl } from '@/lib/client/useJoinUrl';
 import { useServerNow } from '@/lib/client/useNow';
 import { useRoom } from '@/lib/client/useRoom';
-import { GUESS_MS, REVEAL_MS, ROUND_KINDS } from '@/lib/game/config';
+import { GUESS_MS, REVEAL_MS } from '@/lib/game/config';
+import { guessMsFor, roundCount } from '@/lib/game/format';
 import { KINDS } from '@/lib/game/kinds';
 import { rankPlayers } from '@/lib/game/rank';
 import type { QuestionKind, RevealedAnswer, RoomView } from '@/lib/game/types';
 
 import { AudioCheck, reopenAudioCheck } from './AudioCheck';
 import { Confetti } from './Confetti';
+import { GiveUpNoticeSetting, useGiveUpNoticeSync } from './GiveUpNotice';
+import { FormatLobby, FormatSetting, useFormatSync } from './Format';
 import { Halo } from './Halo';
 import { HeckleLayer } from './Heckles';
 import { HouseRulesSetting, useHouseRulesSync } from './HouseRules';
@@ -67,6 +70,8 @@ export function HostScreen({ code }: { code: string }) {
   const director = useDirector(view, clockOffset, settings.lobbyMusic, report);
   useSetlistSync(view, token ?? null);
   useHouseRulesSync(view, token ?? null);
+  useGiveUpNoticeSync(view, token ?? null);
+  useFormatSync(view, token ?? null);
 
   // Remember every song this screen reveals, so later rooms skip it.
   const revealedSongId = view?.round?.song?.id;
@@ -125,7 +130,7 @@ export function HostScreen({ code }: { code: string }) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {announcing && view.round && <Chapter key={view.round.kind} kind={view.round.kind} />}
+        {announcing && view.round && <Chapter key={view.round.kind} kind={view.round.kind} kinds={view.round.kinds} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -199,9 +204,9 @@ function Intermission({ view, token }: { view: RoomView; token: string }) {
 }
 
 /** Full-screen announcement when the question changes: "Now name the artist". */
-function Chapter({ kind }: { kind: QuestionKind }) {
-  const first = ROUND_KINDS.indexOf(kind) + 1;
-  const last = ROUND_KINDS.lastIndexOf(kind) + 1;
+function Chapter({ kind, kinds }: { kind: QuestionKind; kinds: QuestionKind[] }) {
+  const first = kinds.indexOf(kind) + 1;
+  const last = kinds.lastIndexOf(kind) + 1;
   return (
     <motion.div
       className={styles.chapter}
@@ -211,9 +216,7 @@ function Chapter({ kind }: { kind: QuestionKind }) {
       exit={{ clipPath: 'circle(0% at 50% 50%)' }}
       transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
     >
-      <p className={styles.chapterEyebrow}>
-        Songs {first} to {last}
-      </p>
+      <p className={styles.chapterEyebrow}>{first === last ? `Song ${first}` : `Songs ${first} to ${last}`}</p>
       <h1 className={styles.chapterTitle}>
         {first === 1 ? 'Name the' : 'Now name the'} <em>{KINDS[kind].noun}</em>
       </h1>
@@ -232,8 +235,12 @@ function Header({ view }: { view: RoomView }) {
       <Wordmark className={styles.headerMark} href="/" />
 
       {inGame && view.round && (
-        <ol className={styles.pips} aria-label={`Song ${view.round.index + 1} of ${view.round.total}`}>
-          {ROUND_KINDS.map((kind, i) => (
+        <ol
+          className={styles.pips}
+          aria-label={`Song ${view.round.index + 1} of ${view.round.total}`}
+          style={pipSize(view.round.kinds.length)}
+        >
+          {view.round.kinds.map((kind, i) => (
             <li
               key={i}
               data-tone={kind}
@@ -272,6 +279,14 @@ function Header({ view }: { view: RoomView }) {
   );
 }
 
+/** A long game's pips get smaller, so the strip stays about as wide as ten of them. */
+function pipSize(rounds: number): React.CSSProperties | undefined {
+  if (rounds <= 12) return undefined;
+  const gap = 0.3;
+  const width = Math.max((26 - 3.4 - gap * (rounds - 1)) / (rounds - 1), 0.35);
+  return { '--pip-width': `${width}em`, '--pip-gap': `${gap}em` } as React.CSSProperties;
+}
+
 function SettingsMenu({
   code,
   songTitle,
@@ -308,6 +323,8 @@ function SettingsMenu({
             checked={settings.lobbyMusic}
             onChange={(lobbyMusic) => updateSettings({ lobbyMusic })}
           />
+          <GiveUpNoticeSetting />
+          <HouseRulesSetting />
           {soundCheck && (
             <button
               type="button"
@@ -320,8 +337,8 @@ function SettingsMenu({
               Check the sound
             </button>
           )}
-          <HouseRulesSetting />
           <SetlistModeSetting />
+          <FormatSetting />
           <button
             type="button"
             className={styles.settingsLink}
@@ -416,6 +433,7 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
 
         <AudioCheck view={view} token={token} director={director} />
         <SetlistLobby view={view} />
+        <FormatLobby view={view} />
 
         <div className={styles.lobbyStart}>
           <Key
@@ -430,7 +448,7 @@ function Lobby({ view, token, director }: { view: RoomView; token: string; direc
                 ? 'Check the sound first, then start.'
                 : view.players[0]
                   ? `${view.players[0].name} can also start it from their phone.`
-                  : '10 songs. 15 seconds each. Faster answers score more.')}
+                  : `${roundCount(view.format)} songs. ${guessMsFor(view.format.plays) / 1000} seconds each. Faster answers score more.`)}
           </p>
         </div>
         {/* Until the sound check is done, it is the click this asks for. */}
@@ -460,9 +478,9 @@ function Countdown({ endsAt, clockOffset, frozenAt }: TimerProps & { endsAt: num
   );
 }
 
-function TimerRing({ startedAt, clockOffset, frozenAt }: TimerProps & { startedAt: number }) {
+function TimerRing({ startedAt, guessMs, clockOffset, frozenAt }: TimerProps & { startedAt: number; guessMs: number }) {
   const now = useServerNow(clockOffset, true, frozenAt);
-  const progress = Math.min(Math.max((now - startedAt) / GUESS_MS, 0), 1);
+  const progress = Math.min(Math.max((now - startedAt) / guessMs, 0), 1);
   return (
     <svg className={styles.ring} viewBox="0 0 100 100" aria-hidden>
       <circle cx="50" cy="50" r="48.5" className={styles.ringTrack} />
@@ -476,6 +494,17 @@ function TimerRing({ startedAt, clockOffset, frozenAt }: TimerProps & { startedA
         strokeDashoffset={progress}
       />
     </svg>
+  );
+}
+
+/** "Play 2 of 2", for a song heard more than once. */
+function PlayCount({ startedAt, plays, clockOffset, frozenAt }: TimerProps & { startedAt: number; plays: number }) {
+  const now = useServerNow(clockOffset, true, frozenAt);
+  const play = Math.min(Math.floor(Math.max(now - startedAt, 0) / GUESS_MS) + 1, plays);
+  return (
+    <span className={styles.playCount}>
+      Play {play} of {plays}
+    </span>
   );
 }
 
@@ -567,7 +596,15 @@ function Game({
           )}
           </AnimatePresence>
           {view.phase === 'guessing' && round.guessStartedAt !== null && (
-            <Countdown endsAt={round.guessStartedAt + GUESS_MS} clockOffset={clockOffset} frozenAt={view.pause?.at} />
+            <Countdown endsAt={round.guessStartedAt + round.guessMs} clockOffset={clockOffset} frozenAt={view.pause?.at} />
+          )}
+          {view.phase === 'guessing' && round.guessStartedAt !== null && round.plays > 1 && (
+            <PlayCount
+              startedAt={round.guessStartedAt}
+              plays={round.plays}
+              clockOffset={clockOffset}
+              frozenAt={view.pause?.at}
+            />
           )}
         </div>
 
@@ -589,7 +626,12 @@ function Game({
               <Halo jukebox={director.jukebox} active />
             </div>
             {view.phase === 'guessing' && round.guessStartedAt !== null && (
-              <TimerRing startedAt={round.guessStartedAt} clockOffset={clockOffset} frozenAt={view.pause?.at} />
+              <TimerRing
+                startedAt={round.guessStartedAt}
+                guessMs={round.guessMs}
+                clockOffset={clockOffset}
+                frozenAt={view.pause?.at}
+              />
             )}
             <VinylRecord
               spinning={director.needleDown || Boolean(view.pause)}
@@ -706,6 +748,7 @@ function Finished({ view, token, director }: { view: RoomView; token: string; di
   const winners = ranked.filter((r) => r.rank === 1).map((r) => r.player);
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
+  const next = roundCount(view.format);
 
   const again = async () => {
     setStarting(true);
@@ -731,7 +774,7 @@ function Finished({ view, token, director }: { view: RoomView; token: string; di
           <Key onClick={() => void again()} disabled={starting}>
             {starting ? 'Picking songs…' : 'Play again'}
           </Key>
-          <p role="alert">{error || 'Same room, ten new songs.'}</p>
+          <p role="alert">{error || `Same room, ${next} new ${next === 1 ? 'song' : 'songs'}.`}</p>
         </div>
       </section>
       <aside className={styles.board}>

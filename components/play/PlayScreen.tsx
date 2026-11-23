@@ -12,7 +12,6 @@ import { useLinerNote } from '@/lib/client/useLinerNote';
 import { useServerNow } from '@/lib/client/useNow';
 import { useRoom } from '@/lib/client/useRoom';
 import {
-  GUESS_MS,
   HECKLE_COOLDOWN_MS,
   MAX_ANSWER_LENGTH,
   MAX_NAME_LENGTH,
@@ -25,6 +24,7 @@ import { KINDS } from '@/lib/game/kinds';
 import { rankPlayers } from '@/lib/game/rank';
 import type { HeckleKind, RoomView } from '@/lib/game/types';
 
+import { GiveUpBanner } from './GiveUpBanner';
 import styles from './play.module.css';
 import { TastePicker } from './TastePicker';
 
@@ -260,6 +260,7 @@ function Room({
       {view.phase === 'reveal' && <RevealView view={view} token={token} clockOffset={clockOffset} />}
       {view.phase === 'finished' && <FinishedView view={view} token={token} />}
       {status === 'reconnecting' && <div className={styles.toast}>Reconnecting…</div>}
+      <GiveUpBanner view={view} />
     </Shell>
   );
 }
@@ -394,17 +395,19 @@ function LoadingView({ view }: { view: RoomView }) {
 
 function TimeBar({
   startedAt,
+  guessMs,
   clockOffset,
   frozenAt,
 }: {
   startedAt: number;
+  guessMs: number;
   clockOffset: number;
   frozenAt?: number | null;
 }) {
   const now = useServerNow(clockOffset, true, frozenAt);
-  const left = Math.min(Math.max(1 - (now - startedAt) / GUESS_MS, 0), 1);
+  const left = Math.min(Math.max(1 - (now - startedAt) / guessMs, 0), 1);
   return (
-    <div className={styles.timeBar} role="timer" aria-label={`${Math.ceil(left * 15)} seconds left`}>
+    <div className={styles.timeBar} role="timer" aria-label={`${Math.ceil((left * guessMs) / 1000)} seconds left`}>
       <i style={{ transform: `scaleX(${left})` }} />
     </div>
   );
@@ -453,7 +456,12 @@ function GuessView({ view, token, clockOffset }: { view: RoomView; token: string
     <section className={styles.centre} data-align="top">
       <RoundHeading view={view} lead="Name the" />
       {round.guessStartedAt !== null && (
-        <TimeBar startedAt={round.guessStartedAt} clockOffset={clockOffset} frozenAt={view.pause?.at} />
+        <TimeBar
+          startedAt={round.guessStartedAt}
+          guessMs={round.guessMs}
+          clockOffset={clockOffset}
+          frozenAt={view.pause?.at}
+        />
       )}
 
       {answer ? (

@@ -48,7 +48,9 @@ For each open item, oldest first:
 4. **Prove it.** `npm run typecheck && npm run lint && npm test` must pass. For
    anything a player would see, run the app and `npm run e2e`.
 5. **Ship it.** Put the item ids in the commit subject:
-   `Fix album for Mr. Brightside (FB-12)`.
+   `Fix album for Mr. Brightside (FB-12)`. If a player would notice the fix,
+   add a line to the public changelog, `content/changelog.md`, in the same
+   commit (the rules are in `AGENTS.md`). Declined items need no entry.
    - A person working by hand may push to `main`. Vercel deploys `main`.
    - The scheduled agent never pushes to `main`. It pushes a branch named
      `feedback/fb-12` (one per item, or per tight group: `feedback/fb-12-fb-15`)
