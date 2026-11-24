@@ -4,17 +4,19 @@
 // the genres and decades they like, on their phone, and draws from everyone's
 // picks together. Host picks lets the TV choose for the room. Difficulty
 // draws from the best-known songs of every decade: the top 10 of each on
-// Easy, 20 on Medium, 30 on Hard, or any number the host types. The picks live
-// in the room so that whoever presses Start, TV or phone, gets the same draw.
-// The draw itself is `chooseSongs` in lib/catalog.
+// Easy, 20 on Medium, 30 on Hard, or any number the host types. Smart opens
+// with songs everyone knows and adapts to how the room does, song by song
+// (smart.ts). The picks live in the room so that whoever presses Start, TV or
+// phone, gets the same draw. The draw itself is `chooseSongs` in lib/catalog.
 
-export type SetlistMode = 'classic' | 'crowd' | 'host' | 'hits';
+export type SetlistMode = 'classic' | 'crowd' | 'host' | 'hits' | 'smart';
 
 export const SETLIST_MODES: readonly { id: SetlistMode; label: string; hint: string }[] = [
   { id: 'classic', label: 'Classic', hint: 'Songs from the whole catalog.' },
   { id: 'crowd', label: 'Crowd picks', hint: 'Each phone picks genres and decades.' },
   { id: 'host', label: 'Host picks', hint: 'This screen picks genres and decades.' },
   { id: 'hits', label: 'Difficulty', hint: 'Easy, Medium or Hard: the top hits of every decade.' },
+  { id: 'smart', label: 'Smart', hint: 'Adapts to the room: easier when you’re stuck, harder on a roll.' },
 ];
 
 /**

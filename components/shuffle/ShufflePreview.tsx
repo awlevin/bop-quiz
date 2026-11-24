@@ -138,7 +138,8 @@ export function ShufflePreview({ initial }: { initial: GameDraw }) {
         Each draw is what pressing Start would have queued for a fresh room: ten questions, three
         spares, and the finale. No artist twice, and any song with an open report sits out. The
         Crowd picks and Host picks setlists draw for a few made-up picks, and Difficulty draws on
-        Easy: the top ten songs of each decade.
+        Easy: the top ten songs of each decade. Smart shows how a new room&rsquo;s game would open
+        if every song went to plan. In a real game it picks each next song from how the room just did.
       </p>
 
       <div className={styles.controls}>

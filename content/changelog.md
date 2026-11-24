@@ -2,6 +2,11 @@
 
 Notes on what's changed. Newest first.
 
+## November 24, 2026
+
+### 🔥 New Features
+- **🧠 Smart setlist (experimental).** A new setlist mode that reads the room. It opens with a song everyone knows, follows a stumper with an easier one, reaches for deeper cuts when you're on a roll, and slips in the odd surprise banger. It remembers your room from game to game. Preview it on [/shuffle](/shuffle).
+
 ## November 23, 2026
 
 ### 🔥 New Features

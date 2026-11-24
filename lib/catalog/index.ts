@@ -9,11 +9,13 @@ import lobby from '@/data/lobby.json';
 import { benchedSongIds } from '@/lib/feedback/store';
 import { ROUNDS_PER_GAME } from '@/lib/game/config';
 import type { GenreFamily, Taste } from '@/lib/game/setlist';
+import type { SmartCandidate } from '@/lib/game/smart';
 import type { Song } from '@/lib/game/types';
 
 import { hitsPool } from './hits';
 import { refreshPreviews } from './itunes';
 import { drawForTastes, familyResolver } from './setlist';
+import { smartPool } from './smart';
 import { primaryArtist, shuffle } from './util';
 
 const SONGS = catalog as Song[];
@@ -103,6 +105,38 @@ export async function pickSongs(
   const { songs, finales } = await drawSongs(count, excludeIds, lastFinaleId, tastes, rounds, depth);
   const fresh = await refreshPreviews([...songs, ...finales]);
   return { songs: fresh.slice(0, songs.length), finales: fresh.slice(songs.length) };
+}
+
+/**
+ * Smart mode's candidates for a game of `rounds` rounds (`smartPool`) and
+ * the finale, with the preview URLs still as stored.
+ */
+export async function drawSmart(
+  rounds: number,
+  excludeIds: readonly number[],
+  lastFinaleId?: number,
+): Promise<{ pool: SmartCandidate[]; finales: Song[] }> {
+  const benched = new Set(await benchedSongIds().catch(() => []));
+  const pool = smartPool(
+    SONGS.filter((s) => !benched.has(s.id)),
+    excludeIds,
+    rounds,
+  );
+  return { pool, finales: chooseFinales(pool.map((c) => c.song), lastFinaleId) };
+}
+
+/** Smart mode's candidates and the finale, with preview URLs fetched fresh from iTunes. */
+export async function pickSmart(
+  rounds: number,
+  excludeIds: readonly number[],
+  lastFinaleId?: number,
+): Promise<{ pool: SmartCandidate[]; finales: Song[] }> {
+  const { pool, finales } = await drawSmart(rounds, excludeIds, lastFinaleId);
+  const fresh = await refreshPreviews([...pool.map((c) => c.song), ...finales]);
+  return {
+    pool: pool.map((c, i) => ({ ...c, song: fresh[i] })),
+    finales: fresh.slice(pool.length),
+  };
 }
 
 let families: ((song: Song) => GenreFamily) | null = null;

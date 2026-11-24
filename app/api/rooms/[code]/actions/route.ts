@@ -1,4 +1,4 @@
-import { pickSongs } from '@/lib/catalog';
+import { pickSmart, pickSongs } from '@/lib/catalog';
 import { SPARE_SONGS } from '@/lib/game/config';
 import { cleanFormat, DEFAULT_FORMAT, roundCount } from '@/lib/game/format';
 import { isGiveUpNotice } from '@/lib/game/giveUpNotice';
@@ -84,22 +84,24 @@ export async function POST(
     // The reducer refuses too; this just skips drawing songs for nothing.
     if (room.audioChecked === false) return refuse(409, 'Check the sound on the big screen first.');
     const rounds = roundCount(room.format ?? DEFAULT_FORMAT);
-    const { songs, finales } = await pickSongs(
-      rounds + SPARE_SONGS,
-      room.playedSongIds,
-      room.finales?.[0]?.id,
-      // Crowd picks or Host picks; none at all is a Classic draw.
-      tastesFor(room.setlist, room.players.map((p) => p.id)),
-      rounds,
-      // Difficulty: only each decade's best-known songs.
-      depthFor(room.setlist),
-    );
-    action = {
-      type: 'start',
-      songs: songs.slice(0, rounds),
-      spares: songs.slice(rounds),
-      finales,
-    };
+    const lastFinaleId = room.finales?.[0]?.id;
+    if (room.setlist?.mode === 'smart') {
+      // Smart: the room chooses each song from the pool as the game goes.
+      const { pool, finales } = await pickSmart(rounds, room.playedSongIds, lastFinaleId);
+      action = { type: 'start', songs: [], spares: [], finales, pool, seed: Math.floor(Math.random() * 2 ** 32) };
+    } else {
+      const { songs, finales } = await pickSongs(
+        rounds + SPARE_SONGS,
+        room.playedSongIds,
+        lastFinaleId,
+        // Crowd picks or Host picks; none at all is a Classic draw.
+        tastesFor(room.setlist, room.players.map((p) => p.id)),
+        rounds,
+        // Difficulty: only each decade's best-known songs.
+        depthFor(room.setlist),
+      );
+      action = { type: 'start', songs: songs.slice(0, rounds), spares: songs.slice(rounds), finales };
+    }
   }
 
   // Ending a game is the host's call: the TV, or the leader on their phone.

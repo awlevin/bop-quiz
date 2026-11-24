@@ -1,12 +1,15 @@
 // One game's worth of songs, laid out the way a room would play them, for
 // the shuffle preview page. It draws through `drawSongs` so what it shows is
-// what pressing Start would have produced.
+// what pressing Start would have produced. Smart mode lays out how a fresh
+// room's game would open, if every song went as planned; in a real game each
+// song after the first is chosen again at the reveal before it.
 
 import { ROUND_KINDS, ROUNDS_PER_GAME, SPARE_SONGS } from '@/lib/game/config';
 import { DEFAULT_DEPTH, type GenreFamily, type SetlistMode, type Taste } from '@/lib/game/setlist';
+import { beginSmart, planRest } from '@/lib/game/smart';
 import type { QuestionKind, Song } from '@/lib/game/types';
 
-import { drawSongs, songFamily } from './index';
+import { drawSmart, drawSongs, songFamily } from './index';
 
 export interface DrawnRound {
   kind: QuestionKind;
@@ -23,6 +26,7 @@ export const SAMPLE_PICKS: Record<SetlistMode, { who: string; taste: Taste }[]> 
   ],
   host: [{ who: 'The host', taste: { genres: ['hiphop'], decades: [1990, 2000] } }],
   hits: [],
+  smart: [],
 };
 
 /** The depth the page draws Difficulty mode at: Easy. */
@@ -62,6 +66,7 @@ export function layOut(
 
 /** A fresh room's first game: nothing heard yet, no finale to avoid. */
 export async function drawGame(mode: SetlistMode = 'classic'): Promise<GameDraw> {
+  if (mode === 'smart') return drawSmartGame();
   const tastes = SAMPLE_PICKS[mode].map((p) => p.taste);
   const depth = mode === 'hits' ? SAMPLE_DEPTH : null;
   const { songs, finales } = await drawSongs(
@@ -73,4 +78,14 @@ export async function drawGame(mode: SetlistMode = 'classic'): Promise<GameDraw>
     depth,
   );
   return layOut(songs, finales, Date.now(), mode);
+}
+
+/** Smart mode's opening plan for a fresh room, with the pool's next few candidates as the spares. */
+async function drawSmartGame(): Promise<GameDraw> {
+  const { pool, finales } = await drawSmart(ROUNDS_PER_GAME, []);
+  const smart = beginSmart(undefined, pool, Math.floor(Math.random() * 2 ** 32));
+  const songs = planRest(smart, ROUND_KINDS, [])?.songs ?? [];
+  const planned = new Set(songs.map((s) => s.id));
+  const spares = pool.filter((c) => !planned.has(c.song.id)).slice(0, SPARE_SONGS);
+  return layOut([...songs, ...spares.map((c) => c.song)], finales, Date.now(), 'smart');
 }

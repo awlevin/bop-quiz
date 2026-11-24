@@ -21,6 +21,7 @@ import { DEFAULT_FORMAT, type GameFormat, roundGuessMs, roundKinds } from './for
 import { DEFAULT_GIVE_UP_NOTICE } from './giveUpNotice';
 import { grade } from './score';
 import { CLASSIC } from './setlist';
+import { beginSmart, learn, planRest, type SmartState } from './smart';
 import type { Action, Answer, Player, ReduceResult, RoomState, Round, Song } from './types';
 
 export function createRoom(
@@ -96,13 +97,44 @@ function startReveal(prev: RoomState, now: number): RoomState {
     ...p,
     score: p.score + (round.answers[p.id]?.points ?? 0),
   }));
-  return { ...withRound(state, { ...round, revealStartedAt: now }), players, phase: 'reveal' };
+  const revealed: RoomState = { ...withRound(state, { ...round, revealStartedAt: now }), players, phase: 'reveal' };
+  return state.smart?.pool.length ? smartReveal(revealed) : revealed;
+}
+
+/**
+ * Smart mode, at each reveal: learn from how the room did, then choose the
+ * next round's song for the room as it is now. It counts as heard from here,
+ * as a Classic game's songs do from Start.
+ */
+function smartReveal(state: RoomState): RoomState {
+  const round = currentRound(state)!;
+  const smart = learn(state.smart!, round, state.players);
+  const next = state.roundIndex + 1;
+  if (next >= state.rounds.length) return { ...state, smart };
+  const replanned = replan({ ...state, smart }, next);
+  if (!replanned) return { ...state, smart };
+  return { ...replanned, playedSongIds: [...replanned.playedSongIds, replanned.rounds[next].song.id] };
+}
+
+/** Smart mode: choose songs again for every round from `from` on. Null when the pool has run dry. */
+function replan(state: RoomState, from: number): RoomState | null {
+  const smart = state.smart!;
+  const played = state.rounds.slice(0, from).map((r) => r.song);
+  const plan = planRest(smart, state.rounds.map((r) => r.kind), played);
+  if (!plan) return null;
+  const rounds = state.rounds.map((r, i) => (i < from ? r : { ...r, song: plan.songs[i - from] }));
+  return { ...state, rounds, smart: { ...smart, targets: [...smart.targets.slice(0, from), ...plan.targets] } };
+}
+
+/** The game is over: the pool goes, what the room showed it knows stays. */
+function dropPool(smart: SmartState | undefined): SmartState | undefined {
+  return smart && { ...smart, pool: [] };
 }
 
 function advance(state: RoomState): RoomState {
   const last = state.roundIndex >= state.rounds.length - 1;
   return last
-    ? { ...state, phase: 'finished' }
+    ? { ...state, phase: 'finished', smart: dropPool(state.smart) }
     : { ...state, phase: 'loading', roundIndex: state.roundIndex + 1 };
 }
 
@@ -123,6 +155,7 @@ function backToLobby(state: RoomState): RoomState {
     pause: null,
     players: state.players.map((p) => ({ ...p, score: 0 })),
     playedSongIds: state.playedSongIds.filter((id) => !unheard.has(id)),
+    smart: dropPool(state.smart),
   };
 }
 
@@ -218,23 +251,40 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       // `false`, not falsy: a room from before the sound check starts as it always did.
       if (state.audioChecked === false) return fail('Check the sound on the big screen first.');
       const format = state.format ?? DEFAULT_FORMAT;
+      const started: RoomState = {
+        ...state,
+        phase: 'loading',
+        roundIndex: 0,
+        rounds: [],
+        spares: action.spares,
+        finales: action.finales ?? [],
+        pause: null,
+        players: state.players.map((p) => ({ ...p, score: 0 })),
+        smart: dropPool(state.smart),
+      };
+
+      if (action.pool) {
+        // Smart: lay the game out from the pool now, then choose again at every reveal.
+        const kinds = roundKinds(format);
+        if (action.pool.length < kinds.length) return fail('Not enough songs to start.');
+        const smart = beginSmart(state.smart, action.pool, action.seed ?? 0);
+        const sketch = newRounds(format, Array<Song>(kinds.length).fill(action.pool[0].song));
+        const planned = replan({ ...started, rounds: sketch, smart }, 0);
+        if (!planned) return fail('Not enough songs to start.');
+        // Only the first song is heard for sure; the rest are chosen as the game goes.
+        return {
+          ok: true,
+          state: { ...planned, playedSongIds: [...state.playedSongIds, planned.rounds[0].song.id] },
+        };
+      }
+
       const rounds = newRounds(format, action.songs);
       if (action.songs.length < rounds.length) return fail('Not enough songs to start.');
       // Only the songs that become rounds count as heard.
       const songs = action.songs.slice(0, rounds.length);
       return {
         ok: true,
-        state: {
-          ...state,
-          phase: 'loading',
-          roundIndex: 0,
-          rounds,
-          spares: action.spares,
-          finales: action.finales ?? [],
-          pause: null,
-          players: state.players.map((p) => ({ ...p, score: 0 })),
-          playedSongIds: [...state.playedSongIds, ...songs.map((s) => s.id)],
-        },
+        state: { ...started, rounds, playedSongIds: [...state.playedSongIds, ...songs.map((s) => s.id)] },
       };
     }
 
@@ -253,9 +303,18 @@ function apply(state: RoomState, action: Action, now: number): ReduceResult {
       if (state.phase !== 'loading' || action.roundIndex !== state.roundIndex) {
         return { ok: true, state };
       }
+      const round = currentRound(state)!;
+      if (state.smart?.pool.length) {
+        // Smart: the song that would not play leaves the pool, and the round chooses again.
+        const pool = state.smart.pool.filter((c) => c.song.id !== round.song.id);
+        const replanned = replan({ ...state, smart: { ...state.smart, pool } }, state.roundIndex);
+        if (replanned) {
+          const song = replanned.rounds[state.roundIndex].song;
+          return { ok: true, state: { ...replanned, playedSongIds: [...state.playedSongIds, song.id] } };
+        }
+      }
       const [spare, ...spares] = state.spares;
       if (!spare) return { ok: true, state: advance(state) };
-      const round = currentRound(state)!;
       return {
         ok: true,
         state: {

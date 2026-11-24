@@ -85,6 +85,20 @@ since the '60s: the top 10 of each on **Easy**, 20 on **Medium**, 30 on
 **Hard**, or any number the host types under *Custom*. The ranking is
 `data/decade-ranks.json`. A room that has heard every song in its pool gets
 the next-best-known songs rather than repeats.
+
+*Smart* adapts as the room plays. It opens with a song nearly everyone knows,
+then chooses each next song at the reveal before it, from how the room just
+did: an easier one after a stumper, a deeper cut when everyone is getting
+them. It keeps a skill rating for the room, Elo-style, and expects the room to
+get a song with the chance σ(skill − song difficulty − question kind). A
+song's difficulty starts from its decade rank, and album rounds count as
+harder than title rounds. Each round aims at about a 72% chance, give or take,
+with a few surprises: the odd banger out of the blue, a sure thing after two
+stumpers in a row, a stretch after two rounds everyone got, and an easy last
+song so the game ends on a high. The rating carries over, eased back a little,
+into the room's next game. The model is in `lib/game/smart.ts`, and the
+candidates drawn at Start are in `lib/catalog/smart.ts`.
+
 [/shuffle](https://bop-quiz.vercel.app/shuffle) previews each mode with a few
 made-up picks.
 

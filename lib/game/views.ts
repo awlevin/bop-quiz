@@ -26,7 +26,9 @@ export function viewFor(state: RoomState, viewer: Viewer, now: number): RoomView
     };
     if (viewer.role === 'host') {
       roundView.previewUrl = round.song.previewUrl;
-      roundView.nextPreviewUrl = state.rounds[state.roundIndex + 1]?.song.previewUrl;
+      // Smart mode chooses the next song at the reveal, so before then it is only a sketch, not worth fetching.
+      const sketch = Boolean(state.smart?.pool.length) && state.phase !== 'reveal';
+      if (!sketch) roundView.nextPreviewUrl = state.rounds[state.roundIndex + 1]?.song.previewUrl;
     }
     if (viewer.role === 'host' && state.phase === 'guessing' && round.heckles?.length) {
       roundView.heckles = round.heckles;

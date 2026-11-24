@@ -96,7 +96,8 @@ export function SetlistModeSetting() {
 /**
  * The lobby's setlist panel. Host picks: genre and decade keys to press on
  * this screen. Crowd picks: what the phones have asked for so far.
- * Difficulty: Easy, Medium, Hard or a custom depth. Classic shows nothing.
+ * Difficulty: Easy, Medium, Hard or a custom depth. Smart: what it does.
+ * Classic shows nothing.
  */
 export function SetlistLobby({ view }: { view: RoomView }) {
   const { hostTaste } = useSettings();
@@ -108,6 +109,18 @@ export function SetlistLobby({ view }: { view: RoomView }) {
       <section className={setlist.panel} data-setlist="hits">
         <h2 className={styles.panelTitle}>Difficulty</h2>
         <DifficultyPicker tone="booth" />
+      </section>
+    );
+  }
+
+  if (mode === 'smart') {
+    return (
+      <section className={setlist.panel} data-setlist="smart">
+        <h2 className={styles.panelTitle}>Smart</h2>
+        <p className={setlist.note}>
+          Opens with songs everyone knows, then reads the room: an easier one after a stumper, a deeper
+          cut when you&rsquo;re on a roll. It remembers this room from game to game.
+        </p>
       </section>
     );
   }

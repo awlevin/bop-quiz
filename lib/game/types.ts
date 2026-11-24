@@ -7,6 +7,7 @@
 import type { GiveUpNotice } from './giveUpNotice';
 import type { GameFormat } from './format';
 import type { Setlist, SetlistMode, Taste } from './setlist';
+import type { SmartCandidate, SmartState } from './smart';
 
 export type QuestionKind = 'title' | 'artist' | 'year' | 'album';
 
@@ -105,6 +106,8 @@ export interface RoomState {
   giveUpNotice?: GiveUpNotice;
   /** How many rounds of each kind, and plays per song. Absent in rooms older than formats: the default. */
   format?: GameFormat;
+  /** Smart mode: what the room has shown it knows, and this game's candidates. Absent until a Smart game. */
+  smart?: SmartState;
   createdAt: number;
 }
 
@@ -112,7 +115,11 @@ export type Action =
   | { type: 'join'; playerId: string; token: string; name: string }
   | { type: 'rename'; playerId: string; name: string }
   | { type: 'remove-player'; playerId: string }
-  | { type: 'start'; songs: Song[]; spares: Song[]; finales?: Song[] }
+  /**
+   * With `pool` (Smart mode), the reducer picks every round's song from it
+   * as the game goes, and `songs` is ignored. `seed` seeds those picks.
+   */
+  | { type: 'start'; songs: Song[]; spares: Song[]; finales?: Song[]; pool?: SmartCandidate[]; seed?: number }
   | { type: 'pause'; by: string }
   | { type: 'resume' }
   | { type: 'audio-started'; roundIndex: number }
